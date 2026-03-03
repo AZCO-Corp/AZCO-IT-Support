@@ -81,14 +81,21 @@ class EmailPollingController extends Controller {
             }
             */
 
+            // Skip emails from the system itself
+            if(strtolower($email->getSender()) === strtolower(Setting::getSetting("server-email")->getValue())) {
+                continue;
+            }
+
+            // Skip blacklisted emails (bounce notifications, etc.)
+            if($this->isBlacklisted($email)) {
+                continue;
+            }
+
             try {
                 if($email->isReply()) {
-                    $ticketAuthor = $email->getTicket()->authorToArray();
-                    if($ticketAuthor['email'] === $email->getSender()) {
+                    if($email->getTicket()->authorToArray()['email'] === $email->getSender()) {
                         $session->clearSessionData();
-                        $session->createSession($ticketAuthor['id'],
-                                                $ticketAuthor['staff'],
-                                                $email->getTicket()->ticketNumber);
+                        $session->createTicketSession($email->getTicket()->ticketNumber);
 
                         $commentController->handler();
                     }
@@ -115,6 +122,27 @@ class EmailPollingController extends Controller {
             $this->eraseAllEmails();
             Response::respondSuccess();
         }
+    }
+
+
+    private function isBlacklisted($email) {
+        $blacklist = include __DIR__ . "/email-blacklist.php";
+
+        $sender = strtolower($email->getSender());
+        foreach ($blacklist["senders"] as $blocked) {
+            if (strpos($sender, strtolower($blocked)) !== false) {
+                return true;
+            }
+        }
+
+        $subject = $email->getSubject();
+        foreach ($blacklist["subject_patterns"] as $pattern) {
+            if (preg_match($pattern, $subject)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function getLastEmails() {

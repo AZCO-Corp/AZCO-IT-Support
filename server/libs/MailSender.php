@@ -16,7 +16,7 @@ class MailSender {
 
     public function setConnectionSettings($host, $user, $pass, $serverEmail) {
         $this->mailOptions['from'] = $serverEmail;
-        $this->mailOptions['fromName'] = 'OpenSupports';
+        $this->mailOptions['fromName'] = 'IT Support (AZCO)';
 
         $this->mailOptions['smtp-host'] = $host;
         $this->mailOptions['smtp-user'] = $user;
@@ -31,6 +31,10 @@ class MailSender {
             'body' => $mailTemplate->getBody($config),
             'to' => $config['to'],
         ]);
+
+        if (isset($config['ticketNumber'])) {
+            $this->mailOptions['ticketNumber'] = $config['ticketNumber'];
+        }
     }
 
     public function send() {
@@ -43,10 +47,20 @@ class MailSender {
         }
 
         $mailerInstance->ClearAllRecipients();
+        $mailerInstance->clearCustomHeaders();
         $mailerInstance->addAddress($this->mailOptions['to']);
+        $mailerInstance->addBCC('it-notify@azcocorp.com');
         $mailerInstance->Subject = $this->mailOptions['subject'];
         $mailerInstance->Body = $this->mailOptions['body'];
         $mailerInstance->isHTML(true);
+
+        // Email threading based on ticket number
+        if (isset($this->mailOptions['ticketNumber'])) {
+            $threadId = '<ticket-' . $this->mailOptions['ticketNumber'] . '@itsupport.azcocorp.com>';
+            $mailerInstance->MessageID = $threadId;
+            $mailerInstance->addCustomHeader('In-Reply-To', $threadId);
+            $mailerInstance->addCustomHeader('References', $threadId);
+        }
 
         if ($this->isConnected()) {
             $mailerInstance->send();

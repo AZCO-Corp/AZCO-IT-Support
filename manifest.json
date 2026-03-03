@@ -1,0 +1,24 @@
+{
+  "id": "/",
+  "name": "IT Support (AZCO)",
+  "short_name": "IT Support",
+  "description": "AZCO IT Support Ticket System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#414a52",
+  "icons": [
+    {
+      "src": "/images/support-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/support-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
