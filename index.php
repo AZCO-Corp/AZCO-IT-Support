@@ -20,7 +20,7 @@
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/v4-shims.css">
         <style>
-            .admin-login-btn {
+            .login-switch-btn {
                 display: inline-block;
                 margin-top: 12px;
                 padding: 8px 16px;
@@ -33,12 +33,12 @@
                 text-decoration: none;
                 transition: all 0.2s;
             }
-            .admin-login-btn:hover {
+            .login-switch-btn:hover {
                 background: #414a52;
                 color: #fff;
                 border-color: #414a52;
             }
-            .admin-login-btn i {
+            .login-switch-btn i {
                 margin-right: 6px;
             }
         </style>
@@ -62,22 +62,39 @@
                 navigator.serviceWorker.register('/sw.js');
             }
 
-            // Inject "Admin Login" button into the user login widget
+            // Inject login switch buttons for PWA navigation
             (function() {
-                if (window.location.pathname.indexOf('/admin') === 0) return;
+                var isAdmin = window.location.pathname.indexOf('/admin') === 0;
 
-                var observer = new MutationObserver(function(mutations) {
-                    var container = document.querySelector('.main-home-page__link-buttons-container');
-                    if (container && !document.getElementById('admin-login-btn')) {
-                        var btn = document.createElement('a');
-                        btn.id = 'admin-login-btn';
-                        btn.href = '/admin';
-                        btn.className = 'admin-login-btn';
-                        var icon = document.createElement('i');
-                        icon.className = 'fas fa-shield-alt';
-                        btn.appendChild(icon);
-                        btn.appendChild(document.createTextNode(' Admin Login'));
-                        container.appendChild(btn);
+                var observer = new MutationObserver(function() {
+                    if (!isAdmin) {
+                        // User login page: add "Admin Login" button
+                        var userContainer = document.querySelector('.main-home-page__link-buttons-container');
+                        if (userContainer && !document.getElementById('login-switch-btn')) {
+                            var btn = document.createElement('a');
+                            btn.id = 'login-switch-btn';
+                            btn.href = '/admin';
+                            btn.className = 'login-switch-btn';
+                            var icon = document.createElement('i');
+                            icon.className = 'fas fa-shield-alt';
+                            btn.appendChild(icon);
+                            btn.appendChild(document.createTextNode(' Admin Login'));
+                            userContainer.appendChild(btn);
+                        }
+                    } else {
+                        // Admin login page: add "User Login" button
+                        var forgotBtn = document.querySelector('.admin-login-page .login-widget__forgot-password');
+                        if (forgotBtn && !document.getElementById('login-switch-btn')) {
+                            var btn = document.createElement('a');
+                            btn.id = 'login-switch-btn';
+                            btn.href = '/';
+                            btn.className = 'login-switch-btn';
+                            var icon = document.createElement('i');
+                            icon.className = 'fas fa-user';
+                            btn.appendChild(icon);
+                            btn.appendChild(document.createTextNode(' User Login'));
+                            forgotBtn.parentNode.insertBefore(btn, forgotBtn.nextSibling);
+                        }
                     }
                 });
 
