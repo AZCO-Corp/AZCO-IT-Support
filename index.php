@@ -41,6 +41,8 @@
             .login-switch-btn i {
                 margin-right: 6px;
             }
+            /* Hide Documentation / Donate links in footer */
+            .main-layout-footer__extra-links { display: none !important; }
             <?php if (strpos($_SERVER['REQUEST_URI'], '/admin') === 0): ?>
             /* Admin: hide the Welcome bar + language picker entirely */
             .main-layout-header { display: none !important; }
@@ -68,6 +70,17 @@
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/sw.js');
             }
+
+            // Rewrite "Powered by OpenSupports" link to AZCO fork
+            (function() {
+                var obs = new MutationObserver(function() {
+                    var link = document.querySelector('.main-layout-footer__os-link');
+                    if (link && link.href !== 'https://github.com/AZCO-Corp/AZCO-IT-Support') {
+                        link.href = 'https://github.com/AZCO-Corp/AZCO-IT-Support';
+                    }
+                });
+                obs.observe(document.getElementById('app'), { childList: true, subtree: true });
+            })();
 
             // Inject login switch buttons for PWA navigation
             (function() {
