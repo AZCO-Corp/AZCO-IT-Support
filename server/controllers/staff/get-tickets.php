@@ -1,4 +1,5 @@
 <?php
+use RedBeanPHP\Facade as RedBean;
 use Respect\Validation\Validator as DataValidator;
 
 /**
@@ -9,20 +10,19 @@ use Respect\Validation\Validator as DataValidator;
  *
  * @apiGroup Staff
  *
- * @apiDescription This path retrieves the tickets assigned to the current staff member.
+ * @apiDescription This path retrieves all tickets in the staff member's departments.
  *
  * @apiPermission staff1
  *
  * @apiParam {Number} page The page number.
  * @apiParam {bool} closed Include closed tickets in the response.
  * @apiParam {Number} departmentId The id of the department searched
- * 
+ *
  * @apiUse NO_PERMISSION
  * @apiUse INVALID_PAGE
- * @apiUse INVALID_PAGE_SIZE
  *
  * @apiSuccess {Object} data Information about a tickets and quantity of pages.
- * @apiSuccess {[Ticket](#api-Data_Structures-ObjectTicket)[]} data.tickets Array of tickets assigned to the staff of the current page.
+ * @apiSuccess {[Ticket](#api-Data_Structures-ObjectTicket)[]} data.tickets Array of tickets in the staff's departments.
  * @apiSuccess {Number} data.page Number of current page.
  * @apiSuccess {Number} data.pages Quantity of pages.
  *
@@ -39,10 +39,6 @@ class GetTicketStaffController extends Controller {
                 'page' => [
                     'validation' => DataValidator::numeric(),
                     'error' => ERRORS::INVALID_PAGE
-                ],
-                'pageSize' => [
-                  'validation' => DataValidator::oneOf(DataValidator::intVal()->between(5, 50),DataValidator::nullType()),
-                  'error' => ERRORS::INVALID_PAGE_SIZE
                 ]
             ]
         ];
@@ -53,33 +49,43 @@ class GetTicketStaffController extends Controller {
         $closed = Controller::request('closed');
         $page = Controller::request('page');
         $departmentId = Controller::request('departmentId');
-        $pageSize = Controller::request('pageSize') ? Controller::request('pageSize') : 10;
-        $offset = ($page-1)*$pageSize;
+        $offset = ($page-1)*10;
 
-        $condition = 'TRUE';
-        $bindings = [];
-
-        if($departmentId) {
-            $condition .= ' AND department_id = ?';
-            $bindings[] = $departmentId;
+        if (Ticket::isTableEmpty()) {
+            Response::respondSuccess([
+                'tickets' => [],
+                'page' => $page,
+                'pages' => 0
+            ]);
+            return;
         }
 
-        if(!$closed) {
-            $condition .= ' AND closed = ?';
-            $bindings[] = '0';
+        // Build department scope from staff's assigned departments
+        $query = ' (';
+        foreach ($user->sharedDepartmentList as $department) {
+            $query .= 'department_id=' . $department->id . ' OR ';
+        }
+        $query .= 'FALSE)';
+
+        if (!$closed) {
+            $query .= ' AND closed = 0';
         }
 
-        $countTotal = $user->withCondition($condition, $bindings)->countShared('ticket');
+        if ($departmentId) {
+            $query .= ' AND department_id=' . $departmentId;
+        }
 
-        $condition .= ' LIMIT ' . $pageSize . ' OFFSET ?';
-        $bindings[] = $offset;
+        $countTotal = Ticket::count($query);
 
-        $tickets = $user->withCondition($condition, $bindings)->sharedTicketList->toArray(true);
+        $query .= ' ORDER BY unread_staff DESC, ticket_number DESC';
+        $query .= ' LIMIT 10 OFFSET ' . $offset;
+
+        $ticketList = Ticket::find($query);
 
         Response::respondSuccess([
-            'tickets' => $tickets,
+            'tickets' => $ticketList->toArray(true),
             'page' => $page,
-            'pages' => ceil($countTotal / $pageSize)
+            'pages' => ceil($countTotal / 10)
         ]);
     }
 }
