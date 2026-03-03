@@ -15,7 +15,7 @@
         <title>IT Support (AZCO)</title>
 
         <link rel="manifest" href="<?=strpos($_SERVER['REQUEST_URI'], '/admin') === 0 ? '/manifest-admin.json' : '/manifest.json'?>">
-        <meta name="theme-color" content="#414a52">
+        <meta name="theme-color" content="#047AC3">
         <link rel="icon" type="image/png" href="<?=$url ?>/images/support-32.png">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/v4-shims.css">
@@ -34,9 +34,9 @@
                 transition: all 0.2s;
             }
             .login-switch-btn:hover {
-                background: #414a52;
+                background: #047AC3;
                 color: #fff;
-                border-color: #414a52;
+                border-color: #047AC3;
             }
             .login-switch-btn i {
                 margin-right: 6px;
