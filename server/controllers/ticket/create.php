@@ -214,19 +214,6 @@ class CreateController extends Controller {
         $author->store();
         $ticket->store();
 
-        // Auto-assign: find first staff in department with notifications enabled
-        $autoAssignStaffs = Staff::find("send_email_on_new_ticket = 1");
-        foreach ($autoAssignStaffs as $autoStaff) {
-            if ($autoStaff->sharedDepartmentList->includesId($department->id)) {
-                $autoStaff->sharedTicketList->add($ticket);
-                $ticket->owner = $autoStaff;
-                $ticket->totalOwners++;
-                $ticket->unread = true;
-                $ticket->store();
-                $autoStaff->store();
-                break;
-            }
-        }
 
         $this->ticketNumber = $ticket->ticketNumber;
     }
