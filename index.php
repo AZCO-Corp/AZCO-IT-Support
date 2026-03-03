@@ -41,6 +41,13 @@
             .login-switch-btn i {
                 margin-right: 6px;
             }
+            <?php if (strpos($_SERVER['REQUEST_URI'], '/admin') === 0): ?>
+            /* Admin: hide the Welcome bar + language picker entirely */
+            .main-layout-header { display: none !important; }
+            <?php else: ?>
+            /* User: hide just the language picker */
+            .main-layout-header__languages { display: none !important; }
+            <?php endif; ?>
         </style>
     </head>
     <body>
