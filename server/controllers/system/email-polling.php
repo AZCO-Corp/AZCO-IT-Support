@@ -93,9 +93,12 @@ class EmailPollingController extends Controller {
 
             try {
                 if($email->isReply()) {
-                    if($email->getTicket()->authorToArray()['email'] === $email->getSender()) {
+                    $ticketAuthor = $email->getTicket()->authorToArray();
+                    if($ticketAuthor['email'] === $email->getSender()) {
                         $session->clearSessionData();
-                        $session->createTicketSession($email->getTicket()->ticketNumber);
+                        $session->createSession($ticketAuthor['id'],
+                                                $ticketAuthor['staff'],
+                                                $email->getTicket()->ticketNumber);
 
                         $commentController->handler();
                     }
@@ -116,10 +119,11 @@ class EmailPollingController extends Controller {
         $session->clearSessionData();
         $session->setSessionData($oldSession);
 
+        $this->eraseAllEmails();
+
         if(count($errors)) {
             Response::respondError(ERRORS::EMAIL_POLLING, null, $errors);
         } else {
-            $this->eraseAllEmails();
             Response::respondSuccess();
         }
     }
