@@ -372,16 +372,10 @@
                 }
 
                 function getCSRFParams() {
-                    var prefix = '';
-                    for (var i = 0; i < localStorage.length; i++) {
-                        var key = localStorage.key(i);
-                        if (key && key.endsWith('_token') && key.indexOf('opensupports') === 0) {
-                            prefix = key.replace('token', '');
-                            break;
-                        }
-                    }
-                    var token = localStorage.getItem(prefix + 'token') || '';
-                    var userId = localStorage.getItem(prefix + 'userId') || '';
+                    // The app stores session data as: root + "_" + key
+                    // e.g. "https://itsupport.securusconverting.com_token"
+                    var token = localStorage.getItem(root + '_token') || '';
+                    var userId = localStorage.getItem(root + '_userId') || '';
                     return 'csrf_token=' + encodeURIComponent(token) + '&csrf_userid=' + encodeURIComponent(userId);
                 }
 
