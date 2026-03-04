@@ -318,7 +318,6 @@
             (function() {
                 if (window.location.pathname.indexOf('/admin') !== 0) return;
 
-                var dashboardInjected = false;
                 var allTickets = [];
                 var currentPage = 1;
                 var totalPages = 1;
@@ -327,56 +326,53 @@
 
                 function fetchTickets(page, closed, append) {
                     isLoading = true;
-                    renderLoading();
-                    var body = 'page=' + page + '&closed=' + (closed ? '1' : '0') + '&query=';
-
-                    var xhr = new XMLHttpRequest();
-                    xhr.open('POST', apiRoot + '/staff/get-all-tickets');
-                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-                    xhr.onload = function() {
-                        isLoading = false;
-                        try {
-                            var resp = JSON.parse(xhr.responseText);
-                            if (resp.status === 'success' && resp.data) {
-                                totalPages = resp.data.pages || 1;
-                                var tickets = resp.data.tickets || [];
-                                tickets.forEach(function(t) {
-                                    var num = t.ticketNumber || t.ticket_number;
-                                    if (num) window.__ticketOwnerMap[String(num)] = (t.owner && t.owner.name) ? t.owner.name : null;
-                                });
-                                if (append) {
-                                    allTickets = allTickets.concat(tickets);
-                                } else {
-                                    allTickets = tickets;
-                                }
-                            }
-                        } catch(e) {}
-                        renderTickets();
-                    };
-                    xhr.onerror = function() {
-                        isLoading = false;
-                        renderTickets();
-                    };
-                    xhr.withCredentials = true;
-                    xhr.send(body);
-                }
-
-                function renderLoading() {
                     var tbody = document.getElementById('dt-tbody');
+                    var btn = document.getElementById('dt-load-more-btn');
                     if (tbody && allTickets.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="6" class="dt-loading">Loading tickets...</td></tr>';
                     }
-                    var btn = document.getElementById('dt-load-more-btn');
                     if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+
+                    var body = 'page=' + page + '&closed=' + (closed ? '1' : '0') + '&query=';
+
+                    // Use fetch instead of XHR to avoid our own interceptor
+                    fetch(apiRoot + '/staff/get-all-tickets', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(resp) {
+                        isLoading = false;
+                        if (resp.status === 'success' && resp.data) {
+                            totalPages = resp.data.pages || 1;
+                            var tickets = resp.data.tickets || [];
+                            tickets.forEach(function(t) {
+                                var num = t.ticketNumber || t.ticket_number;
+                                if (num) window.__ticketOwnerMap[String(num)] = (t.owner && t.owner.name) ? t.owner.name : null;
+                            });
+                            if (append) {
+                                allTickets = allTickets.concat(tickets);
+                            } else {
+                                allTickets = tickets;
+                            }
+                        }
+                        renderTickets();
+                    })
+                    .catch(function() {
+                        isLoading = false;
+                        renderTickets();
+                    });
                 }
 
                 function renderTickets() {
                     var tbody = document.getElementById('dt-tbody');
                     if (!tbody) return;
+                    var btn = document.getElementById('dt-load-more-btn');
 
                     if (allTickets.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="6" class="dt-empty">No tickets found</td></tr>';
-                        var btn = document.getElementById('dt-load-more-btn');
                         if (btn) btn.style.display = 'none';
                         return;
                     }
@@ -404,17 +400,13 @@
                     });
                     tbody.innerHTML = html;
 
-                    // Click handlers
-                    var rows = tbody.querySelectorAll('.dt-row');
-                    rows.forEach(function(row) {
+                    tbody.querySelectorAll('.dt-row').forEach(function(row) {
                         row.addEventListener('click', function() {
                             var tn = this.getAttribute('data-ticket');
                             if (tn) window.location.href = '/admin/panel/tickets/view-ticket/' + tn;
                         });
                     });
 
-                    // Load more button
-                    var btn = document.getElementById('dt-load-more-btn');
                     if (btn) {
                         if (currentPage >= totalPages) {
                             btn.style.display = 'none';
@@ -427,18 +419,22 @@
                 }
 
                 function buildDashboard() {
+                    // Already injected? Don't duplicate.
+                    if (document.querySelector('.dashboard-dual')) return;
+
                     var activityPanel = document.querySelector('.admin-panel-activity');
-                    if (!activityPanel || dashboardInjected) return;
+                    if (!activityPanel) return;
+
                     var path = window.location.pathname.replace(/\/+$/, '');
                     if (path !== '/admin/panel' && path !== '/admin' && path !== '/admin/panel/activity') return;
 
-                    dashboardInjected = true;
+                    // Don't inject if activity panel is already inside our wrapper
+                    if (activityPanel.closest('.dashboard-dual')) return;
 
                     var parent = activityPanel.parentNode;
                     var wrapper = document.createElement('div');
                     wrapper.className = 'dashboard-dual';
 
-                    // Left column - All Tickets
                     var leftCol = document.createElement('div');
                     leftCol.className = 'dashboard-dual__tickets';
                     leftCol.innerHTML = '<h4>All Tickets</h4>' +
@@ -453,7 +449,6 @@
                         '</table>' +
                         '<button id="dt-load-more-btn" class="dt-load-more" style="display:none;">Load More</button>';
 
-                    // Right column - existing activity
                     var rightCol = document.createElement('div');
                     rightCol.className = 'dashboard-dual__activity';
 
@@ -462,7 +457,6 @@
                     rightCol.appendChild(activityPanel);
                     wrapper.appendChild(rightCol);
 
-                    // Event listeners
                     document.getElementById('dt-show-closed').addEventListener('change', function() {
                         showClosed = this.checked;
                         currentPage = 1;
@@ -477,27 +471,18 @@
                         }
                     });
 
-                    // Initial fetch
+                    // Reset state and fetch
+                    allTickets = [];
+                    currentPage = 1;
+                    totalPages = 1;
+                    showClosed = false;
                     fetchTickets(1, false, false);
                 }
 
-                // Watch for dashboard to appear
                 var dashObs = new MutationObserver(function() {
-                    if (!dashboardInjected) buildDashboard();
+                    buildDashboard();
                 });
                 dashObs.observe(document.getElementById('app'), { childList: true, subtree: true });
-
-                // Handle SPA navigation back to dashboard
-                var lastPath = window.location.pathname;
-                setInterval(function() {
-                    var curPath = window.location.pathname;
-                    if (curPath !== lastPath) {
-                        lastPath = curPath;
-                        dashboardInjected = false;
-                        allTickets = [];
-                        currentPage = 1;
-                    }
-                }, 500);
             })();
 
         </script>
