@@ -68,18 +68,18 @@ class EmailPollingController extends Controller {
 
                 return null;
             });
-            /*
+            // Handle email attachment by copying directly to files/ dir
+            // (can't use $_FILES/uploadFile because is_uploaded_file() rejects non-HTTP files)
+            $emailAttachmentName = null;
             if($email->getAttachment()) {
                 $attachment = $email->getAttachment();
-                $_FILES['file'] = [
-                    'name' => $attachment->name,
-                    'type' => mime_content_type($attachment->filePath),
-                    'tmp_name' => $attachment->filePath,
-                    'error' => UPLOAD_ERR_OK,
-                    'size' => filesize($attachment->filePath),
-                ];
+                $ext = pathinfo($attachment->name, PATHINFO_EXTENSION);
+                $baseName = pathinfo($attachment->name, PATHINFO_FILENAME);
+                $baseName = preg_replace('/[^a-zA-Z0-9\.\-]/', '_', strtolower($baseName));
+                $prefix = $email->isReply() ? 't' . $email->getTicket()->ticketNumber : 't0';
+                $emailAttachmentName = $prefix . '_' . substr(Hashing::generateRandomToken(), 0, 6) . '_' . $baseName . '.' . $ext;
+                rename($attachment->filePath, 'files/' . $emailAttachmentName);
             }
-            */
 
             // Skip emails from the system itself
             if(strtolower($email->getSender()) === strtolower(Setting::getSetting("server-email")->getValue())) {
@@ -101,9 +101,27 @@ class EmailPollingController extends Controller {
                                                 $email->getTicket()->ticketNumber);
 
                         $commentController->handler();
+
+                        // Attach email file to the comment just created
+                        if($emailAttachmentName) {
+                            $ticketBean = Ticket::getByTicketNumber($email->getTicketNumber());
+                            \RedBeanPHP\R::exec(
+                                "UPDATE ticketevent SET file = ? WHERE ticket_id = ? ORDER BY id DESC LIMIT 1",
+                                [$emailAttachmentName, $ticketBean->id]
+                            );
+                        }
                     }
                 } else {
                     $createController->handler();
+
+                    // Attach email file to the newly created ticket
+                    if($emailAttachmentName) {
+                        $newTicket = Ticket::getByTicketNumber($email->getTicketNumber());
+                        if($newTicket && !$newTicket->isNull()) {
+                            $newTicket->file = $emailAttachmentName;
+                            $newTicket->store();
+                        }
+                    }
                 }
             } catch(\Exception $e) {
                 $errors[] = [
@@ -113,7 +131,6 @@ class EmailPollingController extends Controller {
                 ];
             }
 
-            unset($_FILES['file']);
         }
 
         $session->clearSessionData();
@@ -157,18 +174,21 @@ class EmailPollingController extends Controller {
         foreach($mailsIds as $mailId) {
             $mail = $this->mailbox->getMail($mailId);
             $mailHeader = $this->mailbox->getMailHeader($mailId);
-            // $mailAttachment = count($mail->getAttachments()) ? current($mail->getAttachments()) : null;
+            $mailAttachment = count($mail->getAttachments()) ? current($mail->getAttachments()) : null;
 
             $emails[] = new Email([
                 'fromAddress' => $mailHeader->fromAddress,
                 'fromName' => $mailHeader->fromName,
                 'subject' => $mailHeader->subject,
                 'content' => $mail->textPlain,
-                'file' => null,
+                'file' => $mailAttachment,
             ]);
 
+            // Clean up non-primary attachments
             foreach($mail->getAttachments() as $attachment) {
-                unlink($attachment->filePath);
+                if($attachment !== $mailAttachment) {
+                    unlink($attachment->filePath);
+                }
             }
         }
 
