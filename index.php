@@ -50,6 +50,92 @@
             /* User: hide just the language picker */
             .main-layout-header__languages { display: none !important; }
             <?php endif; ?>
+
+            /* Dashboard dual-column layout */
+            .dashboard-dual {
+                display: flex;
+                gap: 20px;
+                width: 100%;
+            }
+            .dashboard-dual__tickets {
+                flex: 1;
+                min-width: 0;
+            }
+            .dashboard-dual__activity {
+                flex: 1;
+                min-width: 0;
+            }
+            .dashboard-dual__tickets h4 {
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                color: #333;
+            }
+            .dashboard-tickets-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+            }
+            .dashboard-tickets-table th {
+                text-align: left;
+                padding: 8px 10px;
+                border-bottom: 2px solid #ddd;
+                font-weight: 600;
+                color: #555;
+                white-space: nowrap;
+            }
+            .dashboard-tickets-table td {
+                padding: 8px 10px;
+                border-bottom: 1px solid #eee;
+                vertical-align: middle;
+            }
+            .dashboard-tickets-table tr.dt-row {
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+            .dashboard-tickets-table tr.dt-row:hover {
+                background: #f0f7ff;
+            }
+            .dashboard-tickets-table tr.dt-row--closed td {
+                opacity: 0.55;
+            }
+            .dashboard-tickets-table .dt-number {
+                color: #047AC3;
+                font-weight: 600;
+            }
+            .dashboard-tickets-table .dt-title {
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .dashboard-tickets-table .dt-unassigned {
+                color: #999;
+                font-style: italic;
+            }
+            .dt-load-more {
+                display: block;
+                margin: 12px auto;
+                padding: 6px 20px;
+                background: #047AC3;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+            }
+            .dt-load-more:hover { background: #035f96; }
+            .dt-load-more:disabled { opacity: 0.5; cursor: default; }
+            .dt-controls { margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+            .dt-controls label { font-size: 13px; color: #555; cursor: pointer; user-select: none; }
+            .dt-controls input[type=checkbox] { margin-right: 4px; }
+            .dt-empty { text-align: center; color: #999; padding: 20px; font-size: 14px; }
+            .dt-loading { text-align: center; padding: 20px; color: #888; }
+            @media (max-width: 900px) {
+                .dashboard-dual {
+                    flex-direction: column;
+                }
+            }
         </style>
     </head>
     <body>
@@ -142,7 +228,7 @@
 
                 XMLHttpRequest.prototype.send = function() {
                     var self = this;
-                    if (self._url && (self._url.indexOf('/staff/get-tickets') !== -1 || self._url.indexOf('/staff/get-new-tickets') !== -1)) {
+                    if (self._url && (self._url.indexOf('/staff/get-tickets') !== -1 || self._url.indexOf('/staff/get-new-tickets') !== -1 || self._url.indexOf('/staff/get-all-tickets') !== -1)) {
                         self.addEventListener('load', function() {
                             try {
                                 var resp = JSON.parse(self.responseText);
@@ -227,6 +313,193 @@
                     subtree: true
                 });
             })();
+        
+            // === Dashboard dual-column: All Tickets + Activity ===
+            (function() {
+                if (window.location.pathname.indexOf('/admin') !== 0) return;
+
+                var dashboardInjected = false;
+                var allTickets = [];
+                var currentPage = 1;
+                var totalPages = 1;
+                var showClosed = false;
+                var isLoading = false;
+
+                function fetchTickets(page, closed, append) {
+                    isLoading = true;
+                    renderLoading();
+                    var body = 'page=' + page + '&closed=' + (closed ? '1' : '0') + '&query=';
+
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', apiRoot + '/staff/get-all-tickets');
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhr.onload = function() {
+                        isLoading = false;
+                        try {
+                            var resp = JSON.parse(xhr.responseText);
+                            if (resp.status === 'success' && resp.data) {
+                                totalPages = resp.data.pages || 1;
+                                var tickets = resp.data.tickets || [];
+                                tickets.forEach(function(t) {
+                                    var num = t.ticketNumber || t.ticket_number;
+                                    if (num) window.__ticketOwnerMap[String(num)] = (t.owner && t.owner.name) ? t.owner.name : null;
+                                });
+                                if (append) {
+                                    allTickets = allTickets.concat(tickets);
+                                } else {
+                                    allTickets = tickets;
+                                }
+                            }
+                        } catch(e) {}
+                        renderTickets();
+                    };
+                    xhr.onerror = function() {
+                        isLoading = false;
+                        renderTickets();
+                    };
+                    xhr.withCredentials = true;
+                    xhr.send(body);
+                }
+
+                function renderLoading() {
+                    var tbody = document.getElementById('dt-tbody');
+                    if (tbody && allTickets.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="dt-loading">Loading tickets...</td></tr>';
+                    }
+                    var btn = document.getElementById('dt-load-more-btn');
+                    if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+                }
+
+                function renderTickets() {
+                    var tbody = document.getElementById('dt-tbody');
+                    if (!tbody) return;
+
+                    if (allTickets.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="dt-empty">No tickets found</td></tr>';
+                        var btn = document.getElementById('dt-load-more-btn');
+                        if (btn) btn.style.display = 'none';
+                        return;
+                    }
+
+                    var html = '';
+                    allTickets.forEach(function(t) {
+                        var num = t.ticketNumber || t.ticket_number || '';
+                        var title = t.title || '';
+                        var fullTitle = title;
+                        if (title.length > 40) title = title.substring(0, 40) + '...';
+                        var dept = (t.department && t.department.name) ? t.department.name : '';
+                        var author = (t.author && t.author.name) ? t.author.name : (t.authorName || t.authorEmail || '');
+                        var owner = (t.owner && t.owner.name) ? t.owner.name : '';
+                        var date = t.date || '';
+                        var isClosed = t.closed;
+
+                        html += '<tr class="dt-row' + (isClosed ? ' dt-row--closed' : '') + '" data-ticket="' + num + '">';
+                        html += '<td class="dt-number">#' + num + '</td>';
+                        html += '<td class="dt-title" title="' + fullTitle.replace(/"/g, '&quot;') + '">' + title + '</td>';
+                        html += '<td>' + dept + '</td>';
+                        html += '<td>' + author + '</td>';
+                        html += '<td>' + (owner || '<span class="dt-unassigned">Unassigned</span>') + '</td>';
+                        html += '<td>' + date + '</td>';
+                        html += '</tr>';
+                    });
+                    tbody.innerHTML = html;
+
+                    // Click handlers
+                    var rows = tbody.querySelectorAll('.dt-row');
+                    rows.forEach(function(row) {
+                        row.addEventListener('click', function() {
+                            var tn = this.getAttribute('data-ticket');
+                            if (tn) window.location.href = '/admin/panel/tickets/view-ticket/' + tn;
+                        });
+                    });
+
+                    // Load more button
+                    var btn = document.getElementById('dt-load-more-btn');
+                    if (btn) {
+                        if (currentPage >= totalPages) {
+                            btn.style.display = 'none';
+                        } else {
+                            btn.style.display = 'block';
+                            btn.disabled = false;
+                            btn.textContent = 'Load More';
+                        }
+                    }
+                }
+
+                function buildDashboard() {
+                    var activityPanel = document.querySelector('.admin-panel-activity');
+                    if (!activityPanel || dashboardInjected) return;
+                    var path = window.location.pathname.replace(/\/+$/, '');
+                    if (path !== '/admin/panel' && path !== '/admin') return;
+
+                    dashboardInjected = true;
+
+                    var parent = activityPanel.parentNode;
+                    var wrapper = document.createElement('div');
+                    wrapper.className = 'dashboard-dual';
+
+                    // Left column - All Tickets
+                    var leftCol = document.createElement('div');
+                    leftCol.className = 'dashboard-dual__tickets';
+                    leftCol.innerHTML = '<h4>All Tickets</h4>' +
+                        '<div class="dt-controls">' +
+                        '  <label><input type="checkbox" id="dt-show-closed"> Show closed tickets</label>' +
+                        '</div>' +
+                        '<table class="dashboard-tickets-table">' +
+                        '  <thead><tr>' +
+                        '    <th>#</th><th>Title</th><th>Department</th><th>Author</th><th>Assigned To</th><th>Date</th>' +
+                        '  </tr></thead>' +
+                        '  <tbody id="dt-tbody"><tr><td colspan="6" class="dt-loading">Loading tickets...</td></tr></tbody>' +
+                        '</table>' +
+                        '<button id="dt-load-more-btn" class="dt-load-more" style="display:none;">Load More</button>';
+
+                    // Right column - existing activity
+                    var rightCol = document.createElement('div');
+                    rightCol.className = 'dashboard-dual__activity';
+
+                    parent.insertBefore(wrapper, activityPanel);
+                    wrapper.appendChild(leftCol);
+                    rightCol.appendChild(activityPanel);
+                    wrapper.appendChild(rightCol);
+
+                    // Event listeners
+                    document.getElementById('dt-show-closed').addEventListener('change', function() {
+                        showClosed = this.checked;
+                        currentPage = 1;
+                        allTickets = [];
+                        fetchTickets(1, showClosed, false);
+                    });
+
+                    document.getElementById('dt-load-more-btn').addEventListener('click', function() {
+                        if (currentPage < totalPages && !isLoading) {
+                            currentPage++;
+                            fetchTickets(currentPage, showClosed, true);
+                        }
+                    });
+
+                    // Initial fetch
+                    fetchTickets(1, false, false);
+                }
+
+                // Watch for dashboard to appear
+                var dashObs = new MutationObserver(function() {
+                    if (!dashboardInjected) buildDashboard();
+                });
+                dashObs.observe(document.getElementById('app'), { childList: true, subtree: true });
+
+                // Handle SPA navigation back to dashboard
+                var lastPath = window.location.pathname;
+                setInterval(function() {
+                    var curPath = window.location.pathname;
+                    if (curPath !== lastPath) {
+                        lastPath = curPath;
+                        dashboardInjected = false;
+                        allTickets = [];
+                        currentPage = 1;
+                    }
+                }, 500);
+            })();
+
         </script>
     </body>
 </html>
