@@ -163,7 +163,26 @@
         <script src="<?=$url ?>/bundle.js?v=4"></script>
         <script>
             // App version - bump this when deploying changes
-            var APP_VERSION = '6';
+            var APP_VERSION = '7';
+
+            // Force reload when PWA is restored from bfcache (app resume)
+            window.addEventListener('pageshow', function(e) {
+                if (e.persisted) {
+                    window.location.reload();
+                }
+            });
+            // Also catch visibility change (Edge PWA sometimes uses this instead)
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'visible' && !sessionStorage.getItem('_alive')) {
+                    sessionStorage.setItem('_alive', '1');
+                    window.location.reload();
+                }
+            });
+            // Mark page as alive on load, clear on hide
+            sessionStorage.setItem('_alive', '1');
+            window.addEventListener('pagehide', function() {
+                sessionStorage.removeItem('_alive');
+            });
 
             if ('serviceWorker' in navigator) {
                 // Unregister old SW and register fresh
