@@ -324,6 +324,11 @@
                 var showClosed = false;
                 var isLoading = false;
 
+                function isDashboardPath() {
+                    var path = window.location.pathname.replace(/\/+$/, '');
+                    return (path === '/admin/panel' || path === '/admin' || path === '/admin/panel/activity');
+                }
+
                 function fetchTickets(page, closed, append) {
                     isLoading = true;
                     var tbody = document.getElementById('dt-tbody');
@@ -335,7 +340,6 @@
 
                     var body = 'page=' + page + '&closed=' + (closed ? '1' : '0') + '&query=';
 
-                    // Use fetch instead of XHR to avoid our own interceptor
                     fetch(apiRoot + '/staff/get-all-tickets', {
                         method: 'POST',
                         credentials: 'include',
@@ -418,17 +422,28 @@
                     }
                 }
 
+                function teardownDashboard() {
+                    var wrapper = document.querySelector('.dashboard-dual');
+                    if (!wrapper) return;
+                    // Move activity panel back to its original parent
+                    var activityPanel = wrapper.querySelector('.admin-panel-activity');
+                    var parent = wrapper.parentNode;
+                    if (activityPanel && parent) {
+                        parent.insertBefore(activityPanel, wrapper);
+                    }
+                    wrapper.remove();
+                    allTickets = [];
+                    currentPage = 1;
+                    totalPages = 1;
+                    showClosed = false;
+                }
+
                 function buildDashboard() {
-                    // Already injected? Don't duplicate.
                     if (document.querySelector('.dashboard-dual')) return;
 
                     var activityPanel = document.querySelector('.admin-panel-activity');
                     if (!activityPanel) return;
-
-                    var path = window.location.pathname.replace(/\/+$/, '');
-                    if (path !== '/admin/panel' && path !== '/admin' && path !== '/admin/panel/activity') return;
-
-                    // Don't inject if activity panel is already inside our wrapper
+                    if (!isDashboardPath()) return;
                     if (activityPanel.closest('.dashboard-dual')) return;
 
                     var parent = activityPanel.parentNode;
@@ -471,7 +486,6 @@
                         }
                     });
 
-                    // Reset state and fetch
                     allTickets = [];
                     currentPage = 1;
                     totalPages = 1;
@@ -480,7 +494,12 @@
                 }
 
                 var dashObs = new MutationObserver(function() {
-                    buildDashboard();
+                    if (isDashboardPath()) {
+                        buildDashboard();
+                    } else {
+                        // Not on dashboard — tear down if our wrapper is still in the DOM
+                        teardownDashboard();
+                    }
                 });
                 dashObs.observe(document.getElementById('app'), { childList: true, subtree: true });
             })();
