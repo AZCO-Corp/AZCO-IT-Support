@@ -3,6 +3,9 @@
     $isHttps = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] == "on") || (isset($_SERVER["HTTP_X_FORWARDED_PROTO"]) && $_SERVER["HTTP_X_FORWARDED_PROTO"] == "https");
     $url = ($isHttps ? "https://" : "http://" ) . $_SERVER["HTTP_HOST"] . $path;
     header("X-Frame-Options: DENY");
+    header("Cache-Control: no-cache, no-store, must-revalidate");
+    header("Pragma: no-cache");
+    header("Expires: 0");
 ?>
 <!doctype html>
 <html class="no-js" lang="">
@@ -52,16 +55,17 @@
             <?php endif; ?>
 
             /* Dashboard dual-column layout */
-            .dashboard-dual {
-                display: flex;
+            .dashboard-dual-active {
+                display: flex !important;
+                flex-direction: row !important;
                 gap: 20px;
-                width: 100%;
             }
-            .dashboard-dual__tickets {
+            .dashboard-dual-active > .dashboard-dual__tickets {
                 flex: 1;
                 min-width: 0;
+                order: -1;
             }
-            .dashboard-dual__activity {
+            .dashboard-dual-active > .admin-panel-activity {
                 flex: 1;
                 min-width: 0;
             }
@@ -132,8 +136,8 @@
             .dt-empty { text-align: center; color: #999; padding: 20px; font-size: 14px; }
             .dt-loading { text-align: center; padding: 20px; color: #888; }
             @media (max-width: 900px) {
-                .dashboard-dual {
-                    flex-direction: column;
+                .dashboard-dual-active {
+                    flex-direction: column !important;
                 }
             }
         </style>
@@ -338,13 +342,11 @@
                     }
                     if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
 
-                    var body = 'page=' + page + '&closed=' + (closed ? '1' : '0') + '&query=';
-
                     fetch(apiRoot + '/staff/get-all-tickets', {
                         method: 'POST',
                         credentials: 'include',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: body
+                        body: 'page=' + page + '&closed=' + (closed ? '1' : '0') + '&query='
                     })
                     .then(function(r) { return r.json(); })
                     .then(function(resp) {
@@ -356,18 +358,11 @@
                                 var num = t.ticketNumber || t.ticket_number;
                                 if (num) window.__ticketOwnerMap[String(num)] = (t.owner && t.owner.name) ? t.owner.name : null;
                             });
-                            if (append) {
-                                allTickets = allTickets.concat(tickets);
-                            } else {
-                                allTickets = tickets;
-                            }
+                            allTickets = append ? allTickets.concat(tickets) : tickets;
                         }
                         renderTickets();
                     })
-                    .catch(function() {
-                        isLoading = false;
-                        renderTickets();
-                    });
+                    .catch(function() { isLoading = false; renderTickets(); });
                 }
 
                 function renderTickets() {
@@ -412,47 +407,30 @@
                     });
 
                     if (btn) {
-                        if (currentPage >= totalPages) {
-                            btn.style.display = 'none';
-                        } else {
-                            btn.style.display = 'block';
-                            btn.disabled = false;
-                            btn.textContent = 'Load More';
-                        }
+                        btn.style.display = (currentPage >= totalPages) ? 'none' : 'block';
+                        btn.disabled = false;
+                        btn.textContent = 'Load More';
                     }
                 }
 
-                function teardownDashboard() {
-                    var wrapper = document.querySelector('.dashboard-dual');
-                    if (!wrapper) return;
-                    // Move activity panel back to its original parent
-                    var activityPanel = wrapper.querySelector('.admin-panel-activity');
-                    var parent = wrapper.parentNode;
-                    if (activityPanel && parent) {
-                        parent.insertBefore(activityPanel, wrapper);
-                    }
-                    wrapper.remove();
-                    allTickets = [];
-                    currentPage = 1;
-                    totalPages = 1;
-                    showClosed = false;
-                }
-
-                function buildDashboard() {
-                    if (document.querySelector('.dashboard-dual')) return;
+                function injectDashboard() {
+                    // Already have our panel? skip.
+                    if (document.getElementById('dashboard-dual-tickets')) return;
 
                     var activityPanel = document.querySelector('.admin-panel-activity');
                     if (!activityPanel) return;
                     if (!isDashboardPath()) return;
-                    if (activityPanel.closest('.dashboard-dual')) return;
 
+                    // Add flex class to activity panel's parent (don't move any React nodes)
                     var parent = activityPanel.parentNode;
-                    var wrapper = document.createElement('div');
-                    wrapper.className = 'dashboard-dual';
+                    parent.classList.add('dashboard-dual-active');
 
-                    var leftCol = document.createElement('div');
-                    leftCol.className = 'dashboard-dual__tickets';
-                    leftCol.innerHTML = '<h4>All Tickets</h4>' +
+                    // Create our tickets panel and insert it before the activity panel
+                    // CSS order:-1 puts it on the left
+                    var ticketsPanel = document.createElement('div');
+                    ticketsPanel.className = 'dashboard-dual__tickets';
+                    ticketsPanel.id = 'dashboard-dual-tickets';
+                    ticketsPanel.innerHTML = '<h4>All Tickets</h4>' +
                         '<div class="dt-controls">' +
                         '  <label><input type="checkbox" id="dt-show-closed"> Show closed tickets</label>' +
                         '</div>' +
@@ -464,13 +442,7 @@
                         '</table>' +
                         '<button id="dt-load-more-btn" class="dt-load-more" style="display:none;">Load More</button>';
 
-                    var rightCol = document.createElement('div');
-                    rightCol.className = 'dashboard-dual__activity';
-
-                    parent.insertBefore(wrapper, activityPanel);
-                    wrapper.appendChild(leftCol);
-                    rightCol.appendChild(activityPanel);
-                    wrapper.appendChild(rightCol);
+                    parent.insertBefore(ticketsPanel, activityPanel);
 
                     document.getElementById('dt-show-closed').addEventListener('change', function() {
                         showClosed = this.checked;
@@ -493,15 +465,27 @@
                     fetchTickets(1, false, false);
                 }
 
-                var dashObs = new MutationObserver(function() {
+                function cleanupDashboard() {
+                    var ticketsPanel = document.getElementById('dashboard-dual-tickets');
+                    if (ticketsPanel) {
+                        var parent = ticketsPanel.parentNode;
+                        if (parent) parent.classList.remove('dashboard-dual-active');
+                        ticketsPanel.remove();
+                    }
+                    allTickets = [];
+                    currentPage = 1;
+                    totalPages = 1;
+                    showClosed = false;
+                }
+
+                var obs = new MutationObserver(function() {
                     if (isDashboardPath()) {
-                        buildDashboard();
+                        injectDashboard();
                     } else {
-                        // Not on dashboard — tear down if our wrapper is still in the DOM
-                        teardownDashboard();
+                        cleanupDashboard();
                     }
                 });
-                dashObs.observe(document.getElementById('app'), { childList: true, subtree: true });
+                obs.observe(document.getElementById('app'), { childList: true, subtree: true });
             })();
 
         </script>
