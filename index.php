@@ -79,20 +79,25 @@
             .dashboard-tickets-table {
                 width: 100%;
                 border-collapse: collapse;
-                font-size: 13px;
+                font-size: 12px;
+                table-layout: fixed;
             }
             .dashboard-tickets-table th {
                 text-align: left;
-                padding: 8px 10px;
+                padding: 6px 6px;
                 border-bottom: 2px solid #ddd;
                 font-weight: 600;
                 color: #555;
                 white-space: nowrap;
+                overflow: hidden;
             }
             .dashboard-tickets-table td {
-                padding: 8px 10px;
+                padding: 6px 6px;
                 border-bottom: 1px solid #eee;
                 vertical-align: middle;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
             .dashboard-tickets-table tr.dt-row {
                 cursor: pointer;
@@ -109,7 +114,6 @@
                 font-weight: 600;
             }
             .dashboard-tickets-table .dt-title {
-                max-width: 200px;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -481,8 +485,9 @@
                         '  <label><input type="checkbox" id="dt-show-closed"> Show closed tickets</label>' +
                         '</div>' +
                         '<table class="dashboard-tickets-table">' +
+                        '  <colgroup><col style="width:15%"><col style="width:30%"><col style="width:15%"><col style="width:15%"><col style="width:13%"><col style="width:12%"></colgroup>' +
                         '  <thead><tr>' +
-                        '    <th>#</th><th>Title</th><th>Department</th><th>Author</th><th>Assigned To</th><th>Date</th>' +
+                        '    <th>#</th><th>Title</th><th>Dept</th><th>Author</th><th>Assigned</th><th>Date</th>' +
                         '  </tr></thead>' +
                         '  <tbody id="dt-tbody"><tr><td colspan="6" class="dt-loading">Loading tickets...</td></tr></tbody>' +
                         '</table>' +
