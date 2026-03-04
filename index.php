@@ -388,7 +388,7 @@
                     var tbody = document.getElementById('dt-tbody');
                     var btn = document.getElementById('dt-load-more-btn');
                     if (tbody && allTickets.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" class="dt-loading">Loading tickets...</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="5" class="dt-loading">Loading tickets...</td></tr>';
                     }
                     if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
 
@@ -421,7 +421,7 @@
                     var btn = document.getElementById('dt-load-more-btn');
 
                     if (allTickets.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" class="dt-empty">No tickets found</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="5" class="dt-empty">No tickets found</td></tr>';
                         if (btn) btn.style.display = 'none';
                         return;
                     }
@@ -432,7 +432,6 @@
                         var title = t.title || '';
                         var fullTitle = title;
                         if (title.length > 40) title = title.substring(0, 40) + '...';
-                        var dept = (t.department && t.department.name) ? t.department.name : '';
                         var author = (t.author && t.author.name) ? t.author.name : (t.authorName || t.authorEmail || '');
                         var owner = (t.owner && t.owner.name) ? t.owner.name : '';
                         var date = t.date || '';
@@ -441,7 +440,6 @@
                         html += '<tr class="dt-row' + (isClosed ? ' dt-row--closed' : '') + '" data-ticket="' + num + '">';
                         html += '<td class="dt-number">#' + num + '</td>';
                         html += '<td class="dt-title" title="' + fullTitle.replace(/"/g, '&quot;') + '">' + title + '</td>';
-                        html += '<td>' + dept + '</td>';
                         html += '<td>' + author + '</td>';
                         html += '<td>' + (owner || '<span class="dt-unassigned">Unassigned</span>') + '</td>';
                         html += '<td>' + date + '</td>';
@@ -485,11 +483,11 @@
                         '  <label><input type="checkbox" id="dt-show-closed"> Show closed tickets</label>' +
                         '</div>' +
                         '<table class="dashboard-tickets-table">' +
-                        '  <colgroup><col style="width:15%"><col style="width:30%"><col style="width:15%"><col style="width:15%"><col style="width:13%"><col style="width:12%"></colgroup>' +
+                        '  <colgroup><col style="width:14%"><col style="width:36%"><col style="width:18%"><col style="width:16%"><col style="width:16%"></colgroup>' +
                         '  <thead><tr>' +
-                        '    <th>#</th><th>Title</th><th>Dept</th><th>Author</th><th>Assigned</th><th>Date</th>' +
+                        '    <th>#</th><th>Title</th><th>Author</th><th>Assigned</th><th>Date</th>' +
                         '  </tr></thead>' +
-                        '  <tbody id="dt-tbody"><tr><td colspan="6" class="dt-loading">Loading tickets...</td></tr></tbody>' +
+                        '  <tbody id="dt-tbody"><tr><td colspan="5" class="dt-loading">Loading tickets...</td></tr></tbody>' +
                         '</table>' +
                         '<button id="dt-load-more-btn" class="dt-load-more" style="display:none;">Load More</button>';
 
