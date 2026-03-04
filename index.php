@@ -158,7 +158,7 @@
         <script src="<?=$url ?>/bundle.js?v=4"></script>
         <script>
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js');
+                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function(reg) { reg.update(); });
             }
 
             // Rewrite "Powered by OpenSupports" link to AZCO fork

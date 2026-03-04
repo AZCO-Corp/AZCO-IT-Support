@@ -1,5 +1,4 @@
-var CACHE_VERSION = 'v2';
-
+// v3 - force refresh
 self.addEventListener('install', function(event) {
   self.skipWaiting();
 });
@@ -15,5 +14,12 @@ self.addEventListener('activate', function(event) {
 });
 
 self.addEventListener('fetch', function(event) {
-  event.respondWith(fetch(event.request));
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' })
+        .catch(function() { return caches.match(event.request); })
+    );
+  } else {
+    event.respondWith(fetch(event.request));
+  }
 });
