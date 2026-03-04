@@ -430,7 +430,7 @@
                     var activityPanel = document.querySelector('.admin-panel-activity');
                     if (!activityPanel || dashboardInjected) return;
                     var path = window.location.pathname.replace(/\/+$/, '');
-                    if (path !== '/admin/panel' && path !== '/admin') return;
+                    if (path !== '/admin/panel' && path !== '/admin' && path !== '/admin/panel/activity') return;
 
                     dashboardInjected = true;
 
