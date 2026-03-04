@@ -370,6 +370,20 @@
                     return (path === '/admin/panel' || path === '/admin' || path === '/admin/panel/activity');
                 }
 
+                function getCSRFParams() {
+                    var prefix = '';
+                    for (var i = 0; i < localStorage.length; i++) {
+                        var key = localStorage.key(i);
+                        if (key && key.endsWith('_token') && key.indexOf('opensupports') === 0) {
+                            prefix = key.replace('token', '');
+                            break;
+                        }
+                    }
+                    var token = localStorage.getItem(prefix + 'token') || '';
+                    var userId = localStorage.getItem(prefix + 'userId') || '';
+                    return 'csrf_token=' + encodeURIComponent(token) + '&csrf_userid=' + encodeURIComponent(userId);
+                }
+
                 function fetchTickets(page, closed, append) {
                     isLoading = true;
                     var tbody = document.getElementById('dt-tbody');
@@ -383,7 +397,7 @@
                         method: 'POST',
                         credentials: 'include',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'page=' + page + '&closed=' + (closed ? '1' : '0') + '&query='
+                        body: 'page=' + page + '&closed=' + (closed ? '1' : '0') + '&query=&' + getCSRFParams()
                     })
                     .then(function(r) { return r.json(); })
                     .then(function(resp) {
