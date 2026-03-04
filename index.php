@@ -157,9 +157,46 @@
         <?php endif; ?>
         <script src="<?=$url ?>/bundle.js?v=4"></script>
         <script>
+            // App version - bump this when deploying changes
+            var APP_VERSION = '6';
+
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function(reg) { reg.update(); });
+                // Unregister old SW and register fresh
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                    regs.forEach(function(r) { r.unregister(); });
+                }).then(function() {
+                    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+                });
             }
+
+            // Version check: fetch /version.txt (no cache) and hard-reload if stale
+            (function() {
+                if (sessionStorage.getItem('_vcheck') === APP_VERSION) return;
+                fetch('/version.txt', { cache: 'no-store' })
+                    .then(function(r) { return r.text(); })
+                    .then(function(v) {
+                        if (v.trim() !== APP_VERSION) {
+                            // Page is stale — nuke SW + caches and hard-reload
+                            if ('serviceWorker' in navigator) {
+                                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                                    return Promise.all(regs.map(function(r) { return r.unregister(); }));
+                                }).then(function() {
+                                    if ('caches' in window) {
+                                        caches.keys().then(function(names) {
+                                            names.forEach(function(n) { caches.delete(n); });
+                                        });
+                                    }
+                                    window.location.reload(true);
+                                });
+                            } else {
+                                window.location.reload(true);
+                            }
+                        } else {
+                            sessionStorage.setItem('_vcheck', APP_VERSION);
+                        }
+                    })
+                    .catch(function() {});
+            })();
 
             // Rewrite "Powered by OpenSupports" link to AZCO fork
             (function() {
