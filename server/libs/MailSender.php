@@ -30,6 +30,7 @@ class MailSender {
             'subject' => $mailTemplate->getSubject($config),
             'body' => $mailTemplate->getBody($config),
             'to' => $config['to'],
+            'templateType' => $type,
         ]);
 
         if (isset($config['ticketNumber'])) {
@@ -49,7 +50,12 @@ class MailSender {
         $mailerInstance->ClearAllRecipients();
         $mailerInstance->clearCustomHeaders();
         $mailerInstance->addAddress($this->mailOptions['to']);
-        $mailerInstance->addBCC('it-notify@azcocorp.com');
+
+        // Only BCC it-notify on ticket correspondence (not account/system emails)
+        $bccTemplates = [MailTemplate::TICKET_CREATED, MailTemplate::TICKET_CREATED_STAFF, MailTemplate::TICKET_RESPONDED];
+        if (isset($this->mailOptions['templateType']) && in_array($this->mailOptions['templateType'], $bccTemplates)) {
+            $mailerInstance->addBCC('it-notify@azcocorp.com');
+        }
         $mailerInstance->Subject = $this->mailOptions['subject'];
         $mailerInstance->Body = $this->mailOptions['body'];
         $mailerInstance->isHTML(true);
