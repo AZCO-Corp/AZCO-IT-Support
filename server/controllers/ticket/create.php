@@ -282,15 +282,15 @@ class CreateController extends Controller {
     }
 
     private function sendMailUrgent() {
-         = MailSender::getInstance();
+        $mailSender = MailSender::getInstance();
 
-        ->setTemplate(MailTemplate::TICKET_CREATED_URGENT, [
+        $mailSender->setTemplate(MailTemplate::TICKET_CREATED_URGENT, [
             'to' => 'it-notify@azcocorp.com',
-            'name' => ->name,
-            'ticketNumber' => ->ticketNumber,
-            'title' => ->title
+            'name' => $this->name,
+            'ticketNumber' => $this->ticketNumber,
+            'title' => $this->title
         ]);
 
-        ->send();
+        $mailSender->send();
     }
 }
