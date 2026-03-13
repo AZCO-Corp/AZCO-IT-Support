@@ -56,58 +56,61 @@
             <?php endif; ?>
 
 
-            /* Urgent ticket toggle */
-            .urgent-toggle-container {
-                margin: 15px 0;
-                padding: 0;
+            /* Urgent ticket toggle -- inline next to Title */
+            .urgent-inline-wrapper {
+                display: flex;
+                align-items: flex-end;
+                gap: 12px;
+            }
+            .urgent-inline-wrapper > .form-field:first-child {
+                flex: 1;
+                min-width: 0;
+            }
+            .urgent-toggle-inline {
+                flex: 0 0 auto;
+                padding-bottom: 2px;
             }
             .urgent-toggle-btn {
                 display: flex;
                 align-items: center;
-                gap: 10px;
-                padding: 12px 16px;
+                gap: 8px;
+                padding: 9px 16px;
                 border: 2px solid #ddd;
-                border-radius: 8px;
+                border-radius: 5px;
                 background: #fff;
                 cursor: pointer;
                 transition: all 0.2s;
-                width: 100%;
+                white-space: nowrap;
+                height: 40px;
                 box-sizing: border-box;
             }
-            .urgent-toggle-btn:hover {
-                border-color: #dc3545;
-            }
+            .urgent-toggle-btn:hover { border-color: #dc3545; }
             .urgent-toggle-btn.urgent-active {
                 border-color: #dc3545;
                 background: #fff5f5;
             }
             .urgent-toggle-btn .urgent-icon {
-                font-size: 20px;
+                font-size: 16px;
                 color: #999;
                 transition: color 0.2s;
             }
-            .urgent-toggle-btn.urgent-active .urgent-icon {
-                color: #dc3545;
-            }
+            .urgent-toggle-btn.urgent-active .urgent-icon { color: #dc3545; }
             .urgent-toggle-btn .urgent-label {
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 600;
                 color: #555;
             }
-            .urgent-toggle-btn.urgent-active .urgent-label {
-                color: #dc3545;
-            }
+            .urgent-toggle-btn.urgent-active .urgent-label { color: #dc3545; }
             .urgent-toggle-btn .urgent-check {
-                margin-left: auto;
-                width: 20px;
-                height: 20px;
+                width: 18px;
+                height: 18px;
                 border: 2px solid #ddd;
-                border-radius: 4px;
+                border-radius: 3px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 transition: all 0.2s;
-                font-size: 14px;
+                font-size: 12px;
                 color: transparent;
             }
             .urgent-toggle-btn.urgent-active .urgent-check {
@@ -115,22 +118,50 @@
                 background: #dc3545;
                 color: #fff;
             }
-            .urgent-disclaimer {
-                display: none;
-                margin-top: 10px;
-                padding: 12px 16px;
+            .urgent-detail-bar {
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease;
                 background: #fff3cd;
-                border: 1px solid #ffc107;
+                border: 1px solid transparent;
                 border-radius: 6px;
+                padding: 0 16px;
+                margin: 0;
                 font-size: 13px;
                 color: #856404;
                 line-height: 1.5;
             }
-            .urgent-disclaimer.urgent-visible {
-                display: block;
+            .urgent-detail-bar.urgent-visible {
+                max-height: 200px;
+                padding: 12px 16px;
+                margin: 10px 0 0;
+                border-color: #ffc107;
             }
-            .urgent-disclaimer strong {
+            .urgent-detail-bar strong { color: #664d03; }
+            .urgent-phone-input {
+                margin-top: 8px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .urgent-phone-input label {
+                font-size: 13px;
+                font-weight: 600;
                 color: #664d03;
+                white-space: nowrap;
+            }
+            .urgent-phone-input input {
+                padding: 6px 10px;
+                border: 1px solid #c9a930;
+                border-radius: 4px;
+                font-size: 13px;
+                width: 180px;
+                background: #fff;
+                color: #333;
+            }
+            .urgent-phone-input input:focus {
+                outline: none;
+                border-color: #dc3545;
             }
 
             /* Dashboard dual-column layout */
