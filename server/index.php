@@ -651,19 +651,17 @@
                 };
 
                 function injectUrgentToggle() {
-                    // Look for the ticket creation form submit button
-                    var submitBtn = document.querySelector('.create-ticket-form .form-field--submit .button');
-                    if (!submitBtn) return;
-
                     var form = document.querySelector('.create-ticket-form');
                     if (!form || form.getAttribute('data-urgent-injected')) return;
+
+                    // Look for the submit buttons container
+                    var submitField = form.querySelector('.create-ticket-form__buttons-container');
+                    if (!submitField) return;
+
                     form.setAttribute('data-urgent-injected', '1');
 
                     // Reset state when form appears
                     window.__urgentTicket = false;
-
-                    // Find the submit button's parent form-field
-                    var submitField = submitBtn.closest('.form-field--submit') || submitBtn.parentNode;
 
                     // Create container
                     var container = document.createElement('div');
