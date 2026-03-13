@@ -56,112 +56,108 @@
             <?php endif; ?>
 
 
-            /* Urgent ticket toggle -- inline next to Title */
-            .urgent-inline-wrapper {
+
+            /* Urgent ticket toggle */
+            .urgent-row {
                 display: flex;
-                align-items: flex-end;
-                gap: 12px;
+                align-items: flex-start;
+                gap: 15px;
+                margin-bottom: 0;
             }
-            .urgent-inline-wrapper > .form-field:first-child {
+            .urgent-row > .form-field {
                 flex: 1;
                 min-width: 0;
             }
-            .urgent-toggle-inline {
+            .urgent-toggle-wrap {
                 flex: 0 0 auto;
-                padding-bottom: 2px;
+                padding-top: 24px;
             }
             .urgent-toggle-btn {
-                display: flex;
+                display: inline-flex;
                 align-items: center;
                 gap: 8px;
-                padding: 9px 16px;
-                border: 2px solid #ddd;
+                padding: 10px 18px;
+                border: 2px solid #ccc;
                 border-radius: 5px;
-                background: #fff;
+                background: #fafafa;
                 cursor: pointer;
                 transition: all 0.2s;
                 white-space: nowrap;
-                height: 40px;
-                box-sizing: border-box;
-            }
-            .urgent-toggle-btn:hover { border-color: #dc3545; }
-            .urgent-toggle-btn.urgent-active {
-                border-color: #dc3545;
-                background: #fff5f5;
-            }
-            .urgent-toggle-btn .urgent-icon {
-                font-size: 16px;
-                color: #999;
-                transition: color 0.2s;
-            }
-            .urgent-toggle-btn.urgent-active .urgent-icon { color: #dc3545; }
-            .urgent-toggle-btn .urgent-label {
                 font-size: 13px;
                 font-weight: 600;
-                color: #555;
+                color: #888;
+                height: 42px;
+                box-sizing: border-box;
+                user-select: none;
             }
-            .urgent-toggle-btn.urgent-active .urgent-label { color: #dc3545; }
-            .urgent-toggle-btn .urgent-check {
-                width: 18px;
-                height: 18px;
-                border: 2px solid #ddd;
-                border-radius: 3px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s;
-                font-size: 12px;
-                color: transparent;
+            .urgent-toggle-btn:hover {
+                border-color: #e04;
+                color: #c33;
+                background: #fff5f5;
             }
-            .urgent-toggle-btn.urgent-active .urgent-check {
+            .urgent-toggle-btn.urgent-on {
                 border-color: #dc3545;
                 background: #dc3545;
                 color: #fff;
             }
-            .urgent-detail-bar {
-                max-height: 0;
+            .urgent-toggle-btn .urgent-icn { font-size: 15px; }
+            .urgent-detail-row {
                 overflow: hidden;
-                transition: max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease;
-                background: #fff3cd;
-                border: 1px solid transparent;
-                border-radius: 6px;
-                padding: 0 16px;
+                max-height: 0;
+                opacity: 0;
+                transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.35s ease;
                 margin: 0;
-                font-size: 13px;
-                color: #856404;
-                line-height: 1.5;
             }
-            .urgent-detail-bar.urgent-visible {
-                max-height: 200px;
-                padding: 12px 16px;
-                margin: 10px 0 0;
-                border-color: #ffc107;
+            .urgent-detail-row.open {
+                max-height: 120px;
+                opacity: 1;
+                margin: 8px 0 4px;
             }
-            .urgent-detail-bar strong { color: #664d03; }
-            .urgent-phone-input {
-                margin-top: 8px;
+            .urgent-detail-inner {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-            }
-            .urgent-phone-input label {
+                gap: 20px;
+                background: #fff3cd;
+                border: 1px solid #ffe082;
+                border-radius: 5px;
+                padding: 10px 16px;
                 font-size: 13px;
-                font-weight: 600;
-                color: #664d03;
-                white-space: nowrap;
+                color: #7a5d00;
+                line-height: 1.45;
             }
-            .urgent-phone-input input {
+            .urgent-detail-inner .urgent-msg {
+                flex: 1;
+            }
+            .urgent-detail-inner .urgent-phone-group {
+                flex: 0 0 auto;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .urgent-detail-inner .urgent-phone-group label {
+                font-weight: 600;
+                white-space: nowrap;
+                font-size: 13px;
+                color: #7a5d00;
+            }
+            .urgent-detail-inner .urgent-phone-group input {
                 padding: 6px 10px;
-                border: 1px solid #c9a930;
+                border: 1px solid #d4b446;
                 border-radius: 4px;
                 font-size: 13px;
-                width: 180px;
+                width: 155px;
                 background: #fff;
                 color: #333;
             }
-            .urgent-phone-input input:focus {
+            .urgent-detail-inner .urgent-phone-group input:focus {
                 outline: none;
                 border-color: #dc3545;
+                box-shadow: 0 0 0 2px rgba(220,53,69,0.15);
+            }
+            @media (max-width: 600px) {
+                .urgent-row { flex-direction: column; gap: 0; }
+                .urgent-toggle-wrap { padding-top: 0; margin-bottom: 10px; }
+                .urgent-detail-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
             }
 
             /* Dashboard dual-column layout */
@@ -656,78 +652,94 @@
             })();
 
 
-            // === Urgent ticket toggle (user ticket creation form) ===
+            // === Urgent ticket toggle ===
             (function() {
                 if (window.location.pathname.indexOf('/admin') === 0) return;
-
                 window.__urgentTicket = false;
+                window.__urgentPhone = '';
 
-                // Intercept XHR to inject urgent param on ticket creation
-                var origXHRSend = XMLHttpRequest.prototype.send;
+                // XHR intercept for ticket create
+                var _xhrOpen = XMLHttpRequest.prototype.open;
+                var _xhrSend = XMLHttpRequest.prototype.send;
+                XMLHttpRequest.prototype.open = function(m, u) {
+                    this.__u = u;
+                    return _xhrOpen.apply(this, arguments);
+                };
                 XMLHttpRequest.prototype.send = function(body) {
-                    if (this._url && this._url.indexOf('/ticket/create') !== -1 && window.__urgentTicket && body) {
+                    if (this.__u && this.__u.indexOf('/ticket/create') !== -1 && window.__urgentTicket && body) {
+                        var ph = (window.__urgentPhone || '').trim();
                         if (typeof body === 'string') {
-                            body += '&urgent=1';
+                            body += '&urgent=1&urgentPhone=' + encodeURIComponent(ph);
                         } else if (body instanceof FormData) {
                             body.append('urgent', '1');
+                            body.append('urgentPhone', ph);
                         }
                     }
-                    return origXHRSend.call(this, body);
+                    return _xhrSend.call(this, body);
                 };
 
-                var origXHROpen = XMLHttpRequest.prototype.open;
-                XMLHttpRequest.prototype.open = function(method, url) {
-                    this._url = url;
-                    return origXHROpen.apply(this, arguments);
-                };
-
-                function injectUrgentToggle() {
+                function inject() {
                     var form = document.querySelector('.create-ticket-form');
-                    if (!form || form.getAttribute('data-urgent-injected')) return;
+                    if (!form || form.dataset.urg) return;
 
-                    // Look for the submit buttons container
-                    var submitField = form.querySelector('.create-ticket-form__buttons-container');
-                    if (!submitField) return;
-
-                    form.setAttribute('data-urgent-injected', '1');
-
-                    // Reset state when form appears
+                    // Find the Title form-field by scanning labels
+                    var fields = form.querySelectorAll('.form-field');
+                    var titleField = null;
+                    for (var i = 0; i < fields.length; i++) {
+                        var lbl = fields[i].querySelector('.form-field__label');
+                        if (lbl && lbl.textContent.trim().toLowerCase() === 'title') {
+                            titleField = fields[i];
+                            break;
+                        }
+                    }
+                    if (!titleField) return;
+                    form.dataset.urg = '1';
                     window.__urgentTicket = false;
+                    window.__urgentPhone = '';
 
-                    // Create container
-                    var container = document.createElement('div');
-                    container.className = 'urgent-toggle-container';
-                    container.innerHTML =
-                        '<button type=button class=urgent-toggle-btn id=urgent-toggle-btn>' +
-                        '  <span class=urgent-icon><i class=fas fa-exclamation-triangle></i></span>' +
-                        '  <span class=urgent-label>Mark as Urgent</span>' +
-                        '  <span class=urgent-check>&#10003;</span>' +
-                        '</button>' +
-                        '<div class=urgent-disclaimer id=urgent-disclaimer>' +
-                        '  <strong>&#9888; Urgent Ticket Notice:</strong><br>' +
-                        '  By marking this ticket as urgent, you are confirming that:<br>' +
-                        '  &#8226; A business function is currently <strong>down or critically impaired</strong><br>' +
-                        '  &#8226; You will be <strong>available by phone for the next 15 minutes</strong><br>' +
-                        '  &#8226; IT staff will be notified immediately to respond' +
-                        '</div>';
+                    // Build the row: [ Title field ] [ Urgent button ]
+                    var row = document.createElement('div');
+                    row.className = 'urgent-row';
+                    titleField.parentNode.insertBefore(row, titleField);
+                    row.appendChild(titleField);
 
-                    submitField.parentNode.insertBefore(container, submitField);
+                    var wrap = document.createElement('div');
+                    wrap.className = 'urgent-toggle-wrap';
+                    wrap.innerHTML = '<button type="button" class="urgent-toggle-btn" id="urg-btn">' +
+                        '<span class="urgent-icn"><i class="fas fa-exclamation-triangle"></i></span> ' +
+                        'Urgent</button>';
+                    row.appendChild(wrap);
 
-                    var btn = document.getElementById('urgent-toggle-btn');
-                    var disclaimer = document.getElementById('urgent-disclaimer');
+                    // Detail bar (slides open below)
+                    var detail = document.createElement('div');
+                    detail.className = 'urgent-detail-row';
+                    detail.id = 'urg-detail';
+                    detail.innerHTML = '<div class="urgent-detail-inner">' +
+                        '<span class="urgent-msg"><strong>\u26A0</strong> Business function is down. ' +
+                        'You must be reachable by phone for 15 min.</span>' +
+                        '<span class="urgent-phone-group">' +
+                        '<label>Phone:</label>' +
+                        '<input type="tel" id="urg-phone" placeholder="555-123-4567" />' +
+                        '</span></div>';
+                    row.parentNode.insertBefore(detail, row.nextSibling);
+
+                    var btn = document.getElementById('urg-btn');
+                    var bar = document.getElementById('urg-detail');
+                    var ph = document.getElementById('urg-phone');
 
                     btn.addEventListener('click', function(e) {
                         e.preventDefault();
                         e.stopPropagation();
                         window.__urgentTicket = !window.__urgentTicket;
-                        btn.classList.toggle('urgent-active', window.__urgentTicket);
-                        disclaimer.classList.toggle('urgent-visible', window.__urgentTicket);
+                        btn.classList.toggle('urgent-on', window.__urgentTicket);
+                        bar.classList.toggle('open', window.__urgentTicket);
+                        if (window.__urgentTicket) ph.focus();
+                        if (!window.__urgentTicket) { window.__urgentPhone = ''; ph.value = ''; }
                     });
+                    ph.addEventListener('input', function() { window.__urgentPhone = this.value; });
                 }
 
-                var obs = new MutationObserver(function() {
-                    injectUrgentToggle();
-                });
+                var obs = new MutationObserver(inject);
                 obs.observe(document.getElementById('app'), { childList: true, subtree: true });
             })();
 
