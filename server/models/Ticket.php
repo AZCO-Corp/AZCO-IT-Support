@@ -55,7 +55,8 @@ class Ticket extends DataStore {
             'editedContent',
             'editedTitle',
             'totalDepartments',
-            'totalOwners'
+            'totalOwners',
+            'urgent'
         );
     }
 
@@ -143,7 +144,8 @@ class Ticket extends DataStore {
             'events' => $minimized ? [] : $this->eventsToArray(),
             'tags' => $this->sharedTagList->toArray(true),
             'edited' => $this->editedContent,
-            'editedTitle' => $this->editedTitle
+            'editedTitle' => $this->editedTitle,
+            'urgent' => !!$this->urgent
         ];
     }
 

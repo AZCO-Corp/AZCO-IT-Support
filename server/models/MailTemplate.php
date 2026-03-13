@@ -26,6 +26,7 @@ class MailTemplate extends DataStore {
     const TICKET_RESPONDED = 'TICKET_RESPONDED';
     const TICKET_CLOSED = 'TICKET_CLOSED';
     const TICKET_CREATED_STAFF = 'TICKET_CREATED_STAFF';
+    const TICKET_CREATED_URGENT = 'TICKET_CREATED_URGENT';
 
     public static function getFilePaths() {
         return [
@@ -38,6 +39,7 @@ class MailTemplate extends DataStore {
           'TICKET_RESPONDED' => 'data/mail-templates/ticket-responded.html',
           'TICKET_CLOSED' => 'data/mail-templates/ticket-closed.html',
           'TICKET_CREATED_STAFF' => 'data/mail-templates/ticket-created-staff.html',
+          'TICKET_CREATED_URGENT' => 'data/mail-templates/ticket-created-urgent.html',
       ];
     }
 

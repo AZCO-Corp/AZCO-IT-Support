@@ -51,6 +51,7 @@ class CreateController extends Controller {
     private $email;
     private $name;
     private $apiKey;
+    private $urgent;
     public function validations() {
         $validations = [
             'permission' => 'user',
@@ -106,6 +107,7 @@ class CreateController extends Controller {
         $this->email = Controller::request('email');
         $this->name = Controller::request('name');
         $this->apiKey = APIKey::getDataStore(Controller::request('apiKey'), 'token');
+        $this->urgent = Controller::request('urgent') ? true : false;
         
         if(!Controller::isStaffLogged() && Department::getDataStore($this->departmentId)->private) {
             throw new Exception(ERRORS::INVALID_DEPARTMENT);
@@ -130,6 +132,11 @@ class CreateController extends Controller {
             if($staff->sharedDepartmentList->includesId($this->departmentId)) {
                 $this->sendMailStaff($staff->email);
             }
+        }
+
+        // Send urgent notification to it-notify if marked urgent
+        if ($this->urgent) {
+            $this->sendMailUrgent();
         }
         
         Log::createLog('CREATE_TICKET', $this->ticketNumber);
@@ -198,7 +205,8 @@ class CreateController extends Controller {
             'authorName' => $this->name,
             'authorEmail' => $this->email,
             'totalDepartments' => 0,
-            'totalOwners' => 0
+            'totalOwners' => 0,
+            'urgent' => $this->urgent
         ));
 
         $ticket->setAuthor($author);
@@ -271,5 +279,18 @@ class CreateController extends Controller {
         ]);
 
         $mailSender->send();
+    }
+
+    private function sendMailUrgent() {
+         = MailSender::getInstance();
+
+        ->setTemplate(MailTemplate::TICKET_CREATED_URGENT, [
+            'to' => 'it-notify@azcocorp.com',
+            'name' => ->name,
+            'ticketNumber' => ->ticketNumber,
+            'title' => ->title
+        ]);
+
+        ->send();
     }
 }
