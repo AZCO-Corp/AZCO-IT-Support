@@ -216,10 +216,11 @@ class CreateController extends Controller {
 
         if(!Controller::isStaffLogged()) {
             $author->tickets++;
-
-            $this->email = $author->email;
-            $this->name = $author->name;
         }
+
+        // Always populate name/email for notifications
+        if (!$this->name) $this->name = $author->name;
+        if (!$this->email) $this->email = $author->email;
 
         $author->store();
         $ticket->store();
