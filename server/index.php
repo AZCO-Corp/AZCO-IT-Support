@@ -874,7 +874,7 @@
                     var titleField = null;
                     for (var i = 0; i < fields.length; i++) {
                         var lbl = fields[i].querySelector('.form-field__label');
-                        if (lbl && lbl.textContent.trim().toLowerCase() === 'title') {
+                        if (lbl && (lbl.textContent.trim().toLowerCase() === 'title' || lbl.textContent.trim().toLowerCase() === 'subject')) {
                             titleField = fields[i];
                             break;
                         }
@@ -1189,6 +1189,17 @@
 
                 new MutationObserver(tryInjectTelnyx).observe(document.getElementById('app'), { childList: true, subtree: true });
                 setInterval(tryInjectTelnyx, 1000);
+            })();
+
+
+            // === Rename "Title" to "Subject" in ticket forms ===
+            (function() {
+                function renameLabels() {
+                    document.querySelectorAll('.form-field__label').forEach(function(lbl) {
+                        if (lbl.textContent.trim() === 'Title') lbl.textContent = 'Subject';
+                    });
+                }
+                new MutationObserver(renameLabels).observe(document.getElementById('app'), { childList: true, subtree: true });
             })();
 
         </script>
