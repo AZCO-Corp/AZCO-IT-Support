@@ -139,6 +139,7 @@ class CreateController extends Controller {
         // Send urgent notification to it-notify if marked urgent
         if ($this->urgent) {
             $this->sendMailUrgent();
+            SmsSender::sendUrgentTicketSMS($this->ticketNumber, $this->title, $this->name, $this->urgentPhone ? $this->urgentPhone : 'Not provided');
         }
         
         Log::createLog('CREATE_TICKET', $this->ticketNumber);
