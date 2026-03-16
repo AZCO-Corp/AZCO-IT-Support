@@ -62,7 +62,8 @@ class EditSettingsController extends Controller {
             'mail-template-header-image',
             'default-is-locked',
             'default-department-id',
-            'bcc-email'
+            'bcc-email',
+            'maintenance-bcc-override'
         ];
         $this->checkDefaultDepartmentValid();
 

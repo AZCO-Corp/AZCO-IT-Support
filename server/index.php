@@ -207,6 +207,65 @@
             }
             .bcc-email-saved.show { opacity: 1; }
 
+
+            /* Maintenance mode BCC override */
+            .maint-override-box {
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: max-height 0.3s ease, opacity 0.25s ease, margin 0.3s ease, padding 0.3s ease;
+                margin: 0;
+                padding: 0 18px;
+                background: #fff3cd;
+                border: 1px solid transparent;
+                border-radius: 6px;
+            }
+            .maint-override-box.open {
+                max-height: 150px;
+                opacity: 1;
+                margin-top: 12px;
+                padding: 12px 18px;
+                border-color: #ffe082;
+            }
+            .maint-override-box label {
+                display: block;
+                font-size: 13px;
+                font-weight: 600;
+                color: #7a5d00;
+                margin-bottom: 4px;
+            }
+            .maint-override-box .maint-desc {
+                font-size: 12px;
+                color: #9a7d20;
+                margin-bottom: 8px;
+                line-height: 1.4;
+            }
+            .maint-override-box input {
+                padding: 7px 12px;
+                border: 1px solid #d4b446;
+                border-radius: 4px;
+                font-size: 13px;
+                width: 100%;
+                max-width: 320px;
+                background: #fff;
+                color: #333;
+                box-sizing: border-box;
+            }
+            .maint-override-box input:focus {
+                outline: none;
+                border-color: #dc3545;
+                box-shadow: 0 0 0 2px rgba(220,53,69,0.15);
+            }
+            .maint-override-saved {
+                display: inline-block;
+                margin-left: 8px;
+                font-size: 12px;
+                color: #28a745;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            .maint-override-saved.show { opacity: 1; }
+
             /* Dashboard dual-column layout */
             .dashboard-dual-active {
                 display: flex !important;
@@ -861,6 +920,106 @@
                 // Use both MutationObserver and interval for reliability
                 new MutationObserver(tryInject).observe(document.getElementById('app'), { childList: true, subtree: true });
                 setInterval(tryInject, 1000);
+            })();
+
+
+            // === Maintenance mode BCC override (system preferences) ===
+            (function() {
+                if (window.location.pathname.indexOf('/admin') !== 0) return;
+
+                function mGetCSRF() {
+                    var token = localStorage.getItem(root + '_token') || '';
+                    var userId = localStorage.getItem(root + '_userId') || '';
+                    return 'csrf_token=' + encodeURIComponent(token) + '&csrf_userid=' + encodeURIComponent(userId);
+                }
+
+                function tryInjectOverride() {
+                    if (document.getElementById('maint-override-box')) return;
+                    var anchor = document.querySelector('.admin-panel-system-preferences__maintenance');
+                    if (!anchor) return;
+
+                    var box = document.createElement('div');
+                    box.className = 'maint-override-box';
+                    box.id = 'maint-override-box';
+                    box.innerHTML =
+                        '<label>Notification Override</label>' +
+                        '<div class="maint-desc">While maintenance mode is on, all ticket notifications will go to this email only instead of the normal BCC address.</div>' +
+                        '<div style="display:flex;align-items:center">' +
+                        '<input type="email" id="maint-override-input" placeholder="your-email@azcocorp.com" />' +
+                        '<span class="maint-override-saved" id="maint-override-saved">Saved</span>' +
+                        '</div>';
+
+                    anchor.insertAdjacentElement('afterend', box);
+
+                    var input = document.getElementById('maint-override-input');
+                    var saved = document.getElementById('maint-override-saved');
+
+                    // Load settings and sync visibility
+                    fetch(apiRoot + '/system/get-settings', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'allSettings=1&' + mGetCSRF()
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(resp) {
+                        if (resp.status === 'success' && resp.data) {
+                            if (resp.data['maintenance-bcc-override'] != null) {
+                                input.value = resp.data['maintenance-bcc-override'];
+                            }
+                            if (resp.data['maintenance-mode']) {
+                                box.classList.add('open');
+                            }
+                        }
+                    }).catch(function() {});
+
+                    // Watch the maintenance toggle for changes
+                    var maintToggle = anchor.querySelector('input[type="checkbox"], .toggle-button, [class*="toggle"]');
+                    if (maintToggle) {
+                        maintToggle.addEventListener('click', function() {
+                            setTimeout(function() {
+                                // Re-check: toggle may have changed
+                                var isOn = maintToggle.classList.contains('toggle-button--enabled') ||
+                                           maintToggle.classList.contains('toggle-button_enabled') ||
+                                           (maintToggle.type === 'checkbox' && maintToggle.checked);
+                                box.classList.toggle('open', isOn);
+                            }, 200);
+                        });
+                    }
+
+                    // Also poll the toggle state (React may re-render it)
+                    setInterval(function() {
+                        var tog = anchor.querySelector('[class*="toggle-button"]');
+                        if (!tog) return;
+                        var isOn = tog.className.indexOf('enabled') !== -1 || tog.className.indexOf('yes') !== -1;
+                        if (isOn && !box.classList.contains('open')) box.classList.add('open');
+                        if (!isOn && box.classList.contains('open')) box.classList.remove('open');
+                    }, 500);
+
+                    function saveOverride() {
+                        fetch(apiRoot + '/system/edit-settings', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'maintenance-bcc-override=' + encodeURIComponent(input.value) + '&' + mGetCSRF()
+                        })
+                        .then(function(r) { return r.json(); })
+                        .then(function(resp) {
+                            if (resp.status === 'success') {
+                                saved.classList.add('show');
+                                setTimeout(function() { saved.classList.remove('show'); }, 2000);
+                            }
+                        }).catch(function() {});
+                    }
+
+                    input.addEventListener('blur', saveOverride);
+                    input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') { e.preventDefault(); saveOverride(); input.blur(); }
+                    });
+                }
+
+                new MutationObserver(tryInjectOverride).observe(document.getElementById('app'), { childList: true, subtree: true });
+                setInterval(tryInjectOverride, 1000);
             })();
 
         </script>

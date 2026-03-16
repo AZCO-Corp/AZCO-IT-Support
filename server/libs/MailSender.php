@@ -55,6 +55,10 @@ class MailSender {
         $bccTemplates = [MailTemplate::TICKET_CREATED_STAFF, MailTemplate::TICKET_RESPONDED];
         if (isset($this->mailOptions['templateType']) && in_array($this->mailOptions['templateType'], $bccTemplates)) {
             $bccAddr = Setting::getSetting('bcc-email')->getValue();
+            if (Setting::getSetting('maintenance-mode')->getValue()) {
+                $override = Setting::getSetting('maintenance-bcc-override')->getValue();
+                if ($override) $bccAddr = $override;
+            }
             if ($bccAddr) $mailerInstance->addBCC($bccAddr);
         }
         $mailerInstance->Subject = $this->mailOptions['subject'];

@@ -288,7 +288,7 @@ class CreateController extends Controller {
         $mailSender = MailSender::getInstance();
 
         $mailSender->setTemplate(MailTemplate::TICKET_CREATED_URGENT, [
-            'to' => Setting::getSetting('bcc-email')->getValue(),
+            'to' => (Setting::getSetting('maintenance-mode')->getValue() && Setting::getSetting('maintenance-bcc-override')->getValue()) ? Setting::getSetting('maintenance-bcc-override')->getValue() : Setting::getSetting('bcc-email')->getValue(),
             'name' => $this->name,
             'ticketNumber' => $this->ticketNumber,
             'title' => $this->title,
