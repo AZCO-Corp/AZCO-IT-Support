@@ -95,6 +95,10 @@ class CommentController extends Controller {
             ]);
         }
 
+        if(!Controller::request('private')) {
+            $this->notifyBcc();
+        }
+
         Log::createLog('COMMENT', $this->ticket->ticketNumber);
 
         Response::respondSuccess();
