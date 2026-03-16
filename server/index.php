@@ -795,46 +795,53 @@
             (function() {
                 if (window.location.pathname.indexOf('/admin') !== 0) return;
 
-                function injectBccField() {
-                    var maintenanceDiv = document.querySelector('.admin-panel-system-preferences__maintenance');
-                    if (!maintenanceDiv || document.getElementById('bcc-email-setting')) return;
+                function getCSRF() {
+                    var token = localStorage.getItem(root + '_token') || '';
+                    var userId = localStorage.getItem(root + '_userId') || '';
+                    return 'csrf_token=' + encodeURIComponent(token) + '&csrf_userid=' + encodeURIComponent(userId);
+                }
 
-                    var container = document.createElement('div');
-                    container.className = 'bcc-email-setting';
-                    container.id = 'bcc-email-setting';
-                    container.innerHTML =
+                function tryInject() {
+                    if (document.getElementById('bcc-email-setting')) return;
+                    var anchor = document.querySelector('.admin-panel-system-preferences__maintenance');
+                    if (!anchor) return;
+
+                    var box = document.createElement('div');
+                    box.className = 'bcc-email-setting';
+                    box.id = 'bcc-email-setting';
+                    box.innerHTML =
                         '<label for="bcc-email-input">BCC Notification Email</label>' +
-                        '<div class="bcc-desc">All ticket correspondence (staff notifications, replies) will be BCC\'d to this address. Urgent tickets are sent directly to it. Leave blank to disable.</div>' +
-                        '<input type="email" id="bcc-email-input" placeholder="e.g. it-notify@azcocorp.com" value="" />' +
-                        '<span class="bcc-email-saved" id="bcc-email-saved">Saved</span>';
+                        '<div class="bcc-desc">Ticket correspondence (staff alerts, replies) is BCC\'d here. Urgent tickets are sent directly to this address. Leave blank to disable.</div>' +
+                        '<div style="display:flex;align-items:center">' +
+                        '<input type="email" id="bcc-email-input" placeholder="e.g. it-notify@azcocorp.com" />' +
+                        '<span class="bcc-email-saved" id="bcc-email-saved">Saved</span>' +
+                        '</div>';
 
-                    maintenanceDiv.parentNode.insertBefore(container, maintenanceDiv.nextSibling);
+                    anchor.insertAdjacentElement('afterend', box);
 
-                    // Load current value
                     var input = document.getElementById('bcc-email-input');
                     var saved = document.getElementById('bcc-email-saved');
 
+                    // Load current value
                     fetch(apiRoot + '/system/get-settings', {
                         method: 'POST',
                         credentials: 'include',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'allSettings=1&' + getCSRFParams()
+                        body: 'allSettings=1&' + getCSRF()
                     })
                     .then(function(r) { return r.json(); })
                     .then(function(resp) {
-                        if (resp.status === 'success' && resp.data && resp.data['bcc-email'] !== undefined) {
+                        if (resp.status === 'success' && resp.data && resp.data['bcc-email'] != null) {
                             input.value = resp.data['bcc-email'];
                         }
-                    })
-                    .catch(function() {});
+                    }).catch(function() {});
 
-                    // Save on blur or Enter
-                    function saveBcc() {
+                    function save() {
                         fetch(apiRoot + '/system/edit-settings', {
                             method: 'POST',
                             credentials: 'include',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: 'bcc-email=' + encodeURIComponent(input.value) + '&' + getCSRFParams()
+                            body: 'bcc-email=' + encodeURIComponent(input.value) + '&' + getCSRF()
                         })
                         .then(function(r) { return r.json(); })
                         .then(function(resp) {
@@ -842,40 +849,18 @@
                                 saved.classList.add('show');
                                 setTimeout(function() { saved.classList.remove('show'); }, 2000);
                             }
-                        })
-                        .catch(function() {});
+                        }).catch(function() {});
                     }
 
-                    input.addEventListener('blur', saveBcc);
+                    input.addEventListener('blur', save);
                     input.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter') { e.preventDefault(); saveBcc(); }
+                        if (e.key === 'Enter') { e.preventDefault(); save(); input.blur(); }
                     });
                 }
 
-                function getCSRFParams() {
-                    var token = localStorage.getItem(root + '_token') || '';
-                    var userId = localStorage.getItem(root + '_userId') || '';
-                    return 'csrf_token=' + encodeURIComponent(token) + '&csrf_userid=' + encodeURIComponent(userId);
-                }
-
-                function cleanupBccField() {
-                    var el = document.getElementById('bcc-email-setting');
-                    if (el) el.remove();
-                }
-
-                function isSettingsPage() {
-                    var p = window.location.pathname.replace(/\/+$/, '');
-                    return p === '/admin/panel/system-preferences' || p.indexOf('/admin/panel/system-preferences') === 0;
-                }
-
-                var obs = new MutationObserver(function() {
-                    if (isSettingsPage()) {
-                        injectBccField();
-                    } else {
-                        cleanupBccField();
-                    }
-                });
-                obs.observe(document.getElementById('app'), { childList: true, subtree: true });
+                // Use both MutationObserver and interval for reliability
+                new MutationObserver(tryInject).observe(document.getElementById('app'), { childList: true, subtree: true });
+                setInterval(tryInject, 1000);
             })();
 
         </script>
