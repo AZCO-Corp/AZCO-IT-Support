@@ -803,7 +803,7 @@
 
                 function tryInject() {
                     if (document.getElementById('bcc-email-setting')) return;
-                    var anchor = document.querySelector('.admin-panel-system-preferences__maintenance');
+                    var anchor = document.querySelector('.admin-panel-email-settings__servers');
                     if (!anchor) return;
 
                     var box = document.createElement('div');
