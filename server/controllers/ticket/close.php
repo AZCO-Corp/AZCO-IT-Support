@@ -62,6 +62,7 @@ class CloseController extends Controller {
         $this->ticket->store();
 
         $this->sendMail();
+        $this->sendMailStaff();
         Log::createLog('CLOSE', $this->ticket->ticketNumber);
 
         Response::respondSuccess();
@@ -96,6 +97,28 @@ class CloseController extends Controller {
             'ticketNumber' => $this->ticket->ticketNumber,
             'title' => $this->ticket->title,
             'url' => Setting::getSetting('url')->getValue()
+        ]);
+
+        $mailSender->send();
+    }
+
+    private function sendMailStaff() {
+        $bccAddr = Setting::getSetting('bcc-email')->getValue();
+        if (Setting::getSetting('maintenance-mode')->getValue()) {
+            $override = Setting::getSetting('maintenance-bcc-override')->getValue();
+            if ($override) $bccAddr = $override;
+        }
+        if (!$bccAddr) return;
+
+        $closedBy = Controller::isStaffLogged() ? Controller::getLoggedUser()->name : (($this->ticket->author) ? $this->ticket->author->name : $this->ticket->authorName);
+
+        $mailSender = MailSender::getInstance();
+        $mailSender->setTemplate(MailTemplate::TICKET_CLOSED_STAFF, [
+            'to' => $bccAddr,
+            'name' => $closedBy,
+            'ticketNumber' => $this->ticket->ticketNumber,
+            'title' => $this->ticket->title,
+            'closedBy' => $closedBy
         ]);
 
         $mailSender->send();
