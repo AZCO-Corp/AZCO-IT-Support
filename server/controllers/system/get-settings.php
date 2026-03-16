@@ -61,7 +61,11 @@ class GetSettingsController extends Controller {
                     'default-department-id' => Setting::getSetting('default-department-id')->getValue(),
                     'default-is-locked' => Setting::getSetting('default-is-locked')->getValue(),
                     'bcc-email' => Setting::getSetting('bcc-email')->getValue(),
-                    'maintenance-bcc-override' => Setting::getSetting('maintenance-bcc-override')->getValue()
+                    'maintenance-bcc-override' => Setting::getSetting('maintenance-bcc-override')->getValue(),
+                    'telnyx-api-key' => Setting::getSetting('telnyx-api-key')->getValue(),
+                    'telnyx-from-number' => Setting::getSetting('telnyx-from-number')->getValue(),
+                    'telnyx-profile-id' => Setting::getSetting('telnyx-profile-id')->getValue(),
+                    'telnyx-urgent-numbers' => Setting::getSetting('telnyx-urgent-numbers')->getValue()
                 ];
             } else {
                 $settingsList = [

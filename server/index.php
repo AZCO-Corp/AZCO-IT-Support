@@ -266,6 +266,88 @@
             }
             .maint-override-saved.show { opacity: 1; }
 
+
+            /* Telnyx SMS settings */
+            .telnyx-settings {
+                margin-top: 20px;
+                padding: 18px;
+                background: #f8f9fa;
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+            }
+            .telnyx-settings h4 {
+                margin: 0 0 4px;
+                font-size: 15px;
+                font-weight: 600;
+                color: #333;
+            }
+            .telnyx-settings .telnyx-desc {
+                font-size: 12px;
+                color: #888;
+                margin-bottom: 14px;
+                line-height: 1.4;
+            }
+            .telnyx-settings .telnyx-row {
+                display: flex;
+                gap: 12px;
+                margin-bottom: 10px;
+                flex-wrap: wrap;
+            }
+            .telnyx-settings .telnyx-field {
+                flex: 1;
+                min-width: 200px;
+            }
+            .telnyx-settings .telnyx-field.full {
+                flex: 0 0 100%;
+            }
+            .telnyx-settings label {
+                display: block;
+                font-size: 12px;
+                font-weight: 600;
+                color: #555;
+                margin-bottom: 4px;
+            }
+            .telnyx-settings input, .telnyx-settings textarea {
+                width: 100%;
+                padding: 8px 12px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 13px;
+                color: #333;
+                box-sizing: border-box;
+                font-family: inherit;
+            }
+            .telnyx-settings textarea {
+                resize: vertical;
+                min-height: 42px;
+            }
+            .telnyx-settings input:focus, .telnyx-settings textarea:focus {
+                outline: none;
+                border-color: #047AC3;
+                box-shadow: 0 0 0 2px rgba(4,122,195,0.15);
+            }
+            .telnyx-save-btn {
+                margin-top: 8px;
+                padding: 8px 20px;
+                background: #047AC3;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+                font-weight: 600;
+            }
+            .telnyx-save-btn:hover { background: #035f96; }
+            .telnyx-save-status {
+                display: inline-block;
+                margin-left: 10px;
+                font-size: 12px;
+                color: #28a745;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            .telnyx-save-status.show { opacity: 1; }
+
             /* Dashboard dual-column layout */
             .dashboard-dual-active {
                 display: flex !important;
@@ -1017,6 +1099,96 @@
 
                 new MutationObserver(tryInjectOverride).observe(document.getElementById('app'), { childList: true, subtree: true });
                 setInterval(tryInjectOverride, 1000);
+            })();
+
+
+            // === Telnyx SMS Settings (Email Settings page) ===
+            (function() {
+                if (window.location.pathname.indexOf('/admin') !== 0) return;
+
+                function txGetCSRF() {
+                    var token = localStorage.getItem(root + '_token') || '';
+                    var userId = localStorage.getItem(root + '_userId') || '';
+                    return 'csrf_token=' + encodeURIComponent(token) + '&csrf_userid=' + encodeURIComponent(userId);
+                }
+
+                function tryInjectTelnyx() {
+                    if (document.getElementById('telnyx-settings-panel')) return;
+                    // Anchor after the BCC email setting or the email servers section
+                    var anchor = document.getElementById('bcc-email-setting') || document.querySelector('.admin-panel-email-settings__servers');
+                    if (!anchor) return;
+
+                    var panel = document.createElement('div');
+                    panel.className = 'telnyx-settings';
+                    panel.id = 'telnyx-settings-panel';
+                    panel.innerHTML =
+                        '<h4>SMS Notifications (Telnyx)</h4>' +
+                        '<div class="telnyx-desc">Send SMS alerts to staff when urgent tickets are created. Configure your Telnyx API credentials and the phone numbers to notify.</div>' +
+                        '<div class="telnyx-row">' +
+                        '  <div class="telnyx-field"><label>API Key</label><input type="password" id="tx-api-key" placeholder="KEY..." /></div>' +
+                        '  <div class="telnyx-field"><label>Messaging Profile ID</label><input type="text" id="tx-profile-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" /></div>' +
+                        '</div>' +
+                        '<div class="telnyx-row">' +
+                        '  <div class="telnyx-field"><label>From Number</label><input type="tel" id="tx-from-number" placeholder="+18881234567" /></div>' +
+                        '  <div class="telnyx-field"><label>&nbsp;</label></div>' +
+                        '</div>' +
+                        '<div class="telnyx-row">' +
+                        '  <div class="telnyx-field full"><label>Urgent Notification Numbers (comma-separated)</label><textarea id="tx-urgent-numbers" placeholder="+12015551234, +12015555678"></textarea></div>' +
+                        '</div>' +
+                        '<button type="button" class="telnyx-save-btn" id="tx-save-btn">Save SMS Settings</button>' +
+                        '<span class="telnyx-save-status" id="tx-save-status">Saved</span>';
+
+                    anchor.insertAdjacentElement('afterend', panel);
+
+                    var fields = {
+                        'telnyx-api-key': document.getElementById('tx-api-key'),
+                        'telnyx-profile-id': document.getElementById('tx-profile-id'),
+                        'telnyx-from-number': document.getElementById('tx-from-number'),
+                        'telnyx-urgent-numbers': document.getElementById('tx-urgent-numbers')
+                    };
+
+                    // Load current values
+                    fetch(apiRoot + '/system/get-settings', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'allSettings=1&' + txGetCSRF()
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(resp) {
+                        if (resp.status === 'success' && resp.data) {
+                            for (var key in fields) {
+                                if (resp.data[key] != null) fields[key].value = resp.data[key];
+                            }
+                        }
+                    }).catch(function() {});
+
+                    document.getElementById('tx-save-btn').addEventListener('click', function() {
+                        var body = '';
+                        for (var key in fields) {
+                            body += (body ? '&' : '') + encodeURIComponent(key) + '=' + encodeURIComponent(fields[key].value);
+                        }
+                        body += '&' + txGetCSRF();
+
+                        var status = document.getElementById('tx-save-status');
+                        fetch(apiRoot + '/system/edit-settings', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: body
+                        })
+                        .then(function(r) { return r.json(); })
+                        .then(function(resp) {
+                            if (resp.status === 'success') {
+                                status.classList.add('show');
+                                setTimeout(function() { status.classList.remove('show'); }, 2000);
+                            }
+                        }).catch(function() {});
+                    });
+                }
+
+                new MutationObserver(tryInjectTelnyx).observe(document.getElementById('app'), { childList: true, subtree: true });
+                setInterval(tryInjectTelnyx, 1000);
             })();
 
         </script>

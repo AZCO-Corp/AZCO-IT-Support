@@ -63,7 +63,11 @@ class EditSettingsController extends Controller {
             'default-is-locked',
             'default-department-id',
             'bcc-email',
-            'maintenance-bcc-override'
+            'maintenance-bcc-override',
+            'telnyx-api-key',
+            'telnyx-from-number',
+            'telnyx-profile-id',
+            'telnyx-urgent-numbers'
         ];
         $this->checkDefaultDepartmentValid();
 
