@@ -760,7 +760,6 @@
 
             // === Urgent ticket toggle ===
             (function() {
-                if (window.location.pathname.indexOf('/admin') === 0) return;
                 window.__urgentTicket = false;
                 window.__urgentPhone = '';
 
