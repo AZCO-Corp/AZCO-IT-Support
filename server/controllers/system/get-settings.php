@@ -59,7 +59,8 @@ class GetSettingsController extends Controller {
                     'tags' => Tag::getAll()->toArray(),
                     'mandatory-login' => Setting::getSetting('mandatory-login')->getValue(),
                     'default-department-id' => Setting::getSetting('default-department-id')->getValue(),
-                    'default-is-locked' => Setting::getSetting('default-is-locked')->getValue()
+                    'default-is-locked' => Setting::getSetting('default-is-locked')->getValue(),
+                    'bcc-email' => Setting::getSetting('bcc-email')->getValue()
                 ];
             } else {
                 $settingsList = [

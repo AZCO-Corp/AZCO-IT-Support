@@ -54,7 +54,8 @@ class MailSender {
         // Only BCC it-notify on ticket correspondence (not account/system emails)
         $bccTemplates = [MailTemplate::TICKET_CREATED_STAFF, MailTemplate::TICKET_RESPONDED];
         if (isset($this->mailOptions['templateType']) && in_array($this->mailOptions['templateType'], $bccTemplates)) {
-            $mailerInstance->addBCC('it-notify@azcocorp.com');
+            $bccAddr = Setting::getSetting('bcc-email')->getValue();
+            if ($bccAddr) $mailerInstance->addBCC($bccAddr);
         }
         $mailerInstance->Subject = $this->mailOptions['subject'];
         $mailerInstance->Body = $this->mailOptions['body'];

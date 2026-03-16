@@ -160,6 +160,53 @@
                 .urgent-detail-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
             }
 
+
+            /* BCC notification email field on settings page */
+            .bcc-email-setting {
+                margin-top: 15px;
+                padding: 15px 18px;
+                background: #f8f9fa;
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+            }
+            .bcc-email-setting label {
+                display: block;
+                font-size: 13px;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 6px;
+            }
+            .bcc-email-setting .bcc-desc {
+                font-size: 12px;
+                color: #888;
+                margin-bottom: 8px;
+                line-height: 1.4;
+            }
+            .bcc-email-setting input {
+                width: 100%;
+                max-width: 340px;
+                padding: 8px 12px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 13px;
+                color: #333;
+                box-sizing: border-box;
+            }
+            .bcc-email-setting input:focus {
+                outline: none;
+                border-color: #047AC3;
+                box-shadow: 0 0 0 2px rgba(4,122,195,0.15);
+            }
+            .bcc-email-saved {
+                display: inline-block;
+                margin-left: 10px;
+                font-size: 12px;
+                color: #28a745;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            .bcc-email-saved.show { opacity: 1; }
+
             /* Dashboard dual-column layout */
             .dashboard-dual-active {
                 display: flex !important;
@@ -740,6 +787,94 @@
                 }
 
                 var obs = new MutationObserver(inject);
+                obs.observe(document.getElementById('app'), { childList: true, subtree: true });
+            })();
+
+
+            // === BCC Email setting (admin system preferences) ===
+            (function() {
+                if (window.location.pathname.indexOf('/admin') !== 0) return;
+
+                function injectBccField() {
+                    var maintenanceDiv = document.querySelector('.admin-panel-system-preferences__maintenance');
+                    if (!maintenanceDiv || document.getElementById('bcc-email-setting')) return;
+
+                    var container = document.createElement('div');
+                    container.className = 'bcc-email-setting';
+                    container.id = 'bcc-email-setting';
+                    container.innerHTML =
+                        '<label for="bcc-email-input">BCC Notification Email</label>' +
+                        '<div class="bcc-desc">All ticket correspondence (staff notifications, replies) will be BCC\'d to this address. Urgent tickets are sent directly to it. Leave blank to disable.</div>' +
+                        '<input type="email" id="bcc-email-input" placeholder="e.g. it-notify@azcocorp.com" value="" />' +
+                        '<span class="bcc-email-saved" id="bcc-email-saved">Saved</span>';
+
+                    maintenanceDiv.parentNode.insertBefore(container, maintenanceDiv.nextSibling);
+
+                    // Load current value
+                    var input = document.getElementById('bcc-email-input');
+                    var saved = document.getElementById('bcc-email-saved');
+
+                    fetch(apiRoot + '/system/get-settings', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'allSettings=1&' + getCSRFParams()
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(resp) {
+                        if (resp.status === 'success' && resp.data && resp.data['bcc-email'] !== undefined) {
+                            input.value = resp.data['bcc-email'];
+                        }
+                    })
+                    .catch(function() {});
+
+                    // Save on blur or Enter
+                    function saveBcc() {
+                        fetch(apiRoot + '/system/edit-settings', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'bcc-email=' + encodeURIComponent(input.value) + '&' + getCSRFParams()
+                        })
+                        .then(function(r) { return r.json(); })
+                        .then(function(resp) {
+                            if (resp.status === 'success') {
+                                saved.classList.add('show');
+                                setTimeout(function() { saved.classList.remove('show'); }, 2000);
+                            }
+                        })
+                        .catch(function() {});
+                    }
+
+                    input.addEventListener('blur', saveBcc);
+                    input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') { e.preventDefault(); saveBcc(); }
+                    });
+                }
+
+                function getCSRFParams() {
+                    var token = localStorage.getItem(root + '_token') || '';
+                    var userId = localStorage.getItem(root + '_userId') || '';
+                    return 'csrf_token=' + encodeURIComponent(token) + '&csrf_userid=' + encodeURIComponent(userId);
+                }
+
+                function cleanupBccField() {
+                    var el = document.getElementById('bcc-email-setting');
+                    if (el) el.remove();
+                }
+
+                function isSettingsPage() {
+                    var p = window.location.pathname.replace(/\/+$/, '');
+                    return p === '/admin/panel/system-preferences' || p.indexOf('/admin/panel/system-preferences') === 0;
+                }
+
+                var obs = new MutationObserver(function() {
+                    if (isSettingsPage()) {
+                        injectBccField();
+                    } else {
+                        cleanupBccField();
+                    }
+                });
                 obs.observe(document.getElementById('app'), { childList: true, subtree: true });
             })();
 

@@ -288,7 +288,7 @@ class CreateController extends Controller {
         $mailSender = MailSender::getInstance();
 
         $mailSender->setTemplate(MailTemplate::TICKET_CREATED_URGENT, [
-            'to' => 'it-notify@azcocorp.com',
+            'to' => Setting::getSetting('bcc-email')->getValue(),
             'name' => $this->name,
             'ticketNumber' => $this->ticketNumber,
             'title' => $this->title,
