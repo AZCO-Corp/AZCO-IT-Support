@@ -52,6 +52,7 @@ class CreateController extends Controller {
     private $name;
     private $apiKey;
     private $urgent;
+    private $urgentPhone;
     public function validations() {
         $validations = [
             'permission' => 'user',
@@ -108,6 +109,7 @@ class CreateController extends Controller {
         $this->name = Controller::request('name');
         $this->apiKey = APIKey::getDataStore(Controller::request('apiKey'), 'token');
         $this->urgent = Controller::request('urgent') ? true : false;
+        $this->urgentPhone = Controller::request('urgentPhone');
         
         if(!Controller::isStaffLogged() && Department::getDataStore($this->departmentId)->private) {
             throw new Exception(ERRORS::INVALID_DEPARTMENT);
@@ -275,7 +277,8 @@ class CreateController extends Controller {
             'to' => $email,
             'name' => $this->name,
             'ticketNumber' => $this->ticketNumber,
-            'title' => $this->title
+            'title' => $this->title,
+            'phone' => $this->urgentPhone ? $this->urgentPhone : 'Not provided'
         ]);
 
         $mailSender->send();
@@ -288,7 +291,8 @@ class CreateController extends Controller {
             'to' => 'it-notify@azcocorp.com',
             'name' => $this->name,
             'ticketNumber' => $this->ticketNumber,
-            'title' => $this->title
+            'title' => $this->title,
+            'phone' => $this->urgentPhone ? $this->urgentPhone : 'Not provided'
         ]);
 
         $mailSender->send();
