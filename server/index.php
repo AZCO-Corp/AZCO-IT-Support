@@ -979,19 +979,17 @@
                         maintToggle.addEventListener('click', function() {
                             setTimeout(function() {
                                 // Re-check: toggle may have changed
-                                var isOn = maintToggle.classList.contains('toggle-button--enabled') ||
-                                           maintToggle.classList.contains('toggle-button_enabled') ||
-                                           (maintToggle.type === 'checkbox' && maintToggle.checked);
+                                var isOn = maintToggle.className.indexOf('disabled') === -1;
                                 box.classList.toggle('open', isOn);
                             }, 200);
                         });
                     }
 
-                    // Also poll the toggle state (React may re-render it)
+                    // Poll the toggle state (React may re-render it)
                     setInterval(function() {
-                        var tog = anchor.querySelector('[class*="toggle-button"]');
+                        var tog = anchor.querySelector('.toggle-button');
                         if (!tog) return;
-                        var isOn = tog.className.indexOf('enabled') !== -1 || tog.className.indexOf('yes') !== -1;
+                        var isOn = tog.className.indexOf('disabled') === -1;
                         if (isOn && !box.classList.contains('open')) box.classList.add('open');
                         if (!isOn && box.classList.contains('open')) box.classList.remove('open');
                     }, 500);
