@@ -158,4 +158,27 @@ class CommentController extends Controller {
         
         return $this->imagePaths;
     }
+
+    private function notifyBcc() {
+        $bccAddr = Setting::getSetting('bcc-email')->getValue();
+        if (Setting::getSetting('maintenance-mode')->getValue()) {
+            $override = Setting::getSetting('maintenance-bcc-override')->getValue();
+            if ($override) $bccAddr = $override;
+        }
+        if (!$bccAddr) return;
+
+        $commenterName = $this->user->name;
+
+        $mailSender = MailSender::getInstance();
+        $mailSender->setTemplate(MailTemplate::TICKET_RESPONDED, [
+            'to' => $bccAddr,
+            'name' => $commenterName,
+            'title' => $this->ticket->title,
+            'ticketNumber' => $this->ticket->ticketNumber,
+            'content' => $this->replaceWithImagePaths($this->getImagePaths(), $this->content),
+            'url' => Setting::getSetting('url')->getValue()
+        ]);
+
+        $mailSender->send();
+    }
 }

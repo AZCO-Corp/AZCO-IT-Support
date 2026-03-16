@@ -52,7 +52,7 @@ class MailSender {
         $mailerInstance->addAddress($this->mailOptions['to']);
 
         // Only BCC it-notify on ticket correspondence (not account/system emails)
-        $bccTemplates = [MailTemplate::TICKET_CREATED_STAFF, MailTemplate::TICKET_RESPONDED, MailTemplate::TICKET_CLOSED_STAFF];
+        $bccTemplates = [MailTemplate::TICKET_CREATED_STAFF, MailTemplate::TICKET_CLOSED_STAFF];
         if (isset($this->mailOptions['templateType']) && in_array($this->mailOptions['templateType'], $bccTemplates)) {
             $bccAddr = Setting::getSetting('bcc-email')->getValue();
             if (Setting::getSetting('maintenance-mode')->getValue()) {
