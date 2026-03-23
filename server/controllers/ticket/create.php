@@ -165,6 +165,7 @@ class CreateController extends Controller {
         
         $signupController = new SignUpController(true);
         
+        $originalRequester = Controller::getDataRequester();
         Controller::setDataRequester(function ($key) {
             switch ($key) {
                 case 'email':
@@ -181,6 +182,7 @@ class CreateController extends Controller {
         });
         $signupController->validations();
         $signupController->handler();
+        Controller::setDataRequester($originalRequester);
     }
 
     private function storeTicket() {

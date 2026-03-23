@@ -45,6 +45,10 @@ abstract class Controller {
         };
     }
 
+    public static function getDataRequester() {
+        return self::$dataRequester;
+    }
+
     public static function setDataRequester($dataRequester) {
         self::$dataRequester = $dataRequester;
     }
