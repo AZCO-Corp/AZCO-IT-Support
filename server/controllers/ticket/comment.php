@@ -87,15 +87,16 @@ class CommentController extends Controller {
             $this->sendMail($ticketAuthor);
         }
 
-        if($this->ticket->owner && !$isOwner) {
-            $this->sendMail([
-                'email' => $this->ticket->owner->email,
-                'name' => $this->ticket->owner->name,
-                'staff' => true
-            ]);
-        }
-
-        if(!Controller::request('private')) {
+        if($private) {
+            $this->notifyStaffOfPrivateComment();
+        } else {
+            if($this->ticket->owner && !$isOwner) {
+                $this->sendMail([
+                    'email' => $this->ticket->owner->email,
+                    'name' => $this->ticket->owner->name,
+                    'staff' => true
+                ]);
+            }
             $this->notifyBcc();
         }
 
@@ -184,5 +185,55 @@ class CommentController extends Controller {
         ]);
 
         $mailSender->send();
+    }
+
+    private function notifyStaffOfPrivateComment() {
+        $departmentId = $this->ticket->department->id;
+        $commenterEmail = $this->user->email;
+
+        $recipients = [];
+
+        if ($this->ticket->owner && $this->ticket->owner->email !== $commenterEmail) {
+            $recipients[$this->ticket->owner->email] = $this->ticket->owner->name;
+        }
+
+        $staffs = Staff::find("send_email_on_new_ticket = 1");
+        foreach ($staffs as $staff) {
+            if ($staff->email === $commenterEmail) continue;
+            if (!$staff->sharedDepartmentList->includesId($departmentId)) continue;
+            if (isset($recipients[$staff->email])) continue;
+            $recipients[$staff->email] = $staff->name;
+        }
+
+        if (empty($recipients)) return;
+
+        $url = Setting::getSetting('url')->getValue();
+        $rawContent = $this->replaceWithImagePaths($this->getImagePaths(), $this->content);
+        $styledContent = $this->wrapPrivateContent($rawContent);
+        $subject = '[INTERNAL NOTE] Ticket #' . $this->ticket->ticketNumber . ' - ' . $this->ticket->title;
+
+        foreach ($recipients as $email => $name) {
+            $mailSender = MailSender::getInstance();
+            $mailSender->setTemplate(MailTemplate::TICKET_RESPONDED, [
+                'to' => $email,
+                'name' => $name,
+                'title' => $this->ticket->title,
+                'ticketNumber' => $this->ticket->ticketNumber,
+                'content' => $styledContent,
+                'url' => $url,
+            ]);
+            $mailSender->mailOptions['subject'] = $subject;
+            $mailSender->send();
+        }
+    }
+
+    private function wrapPrivateContent($content) {
+        $commenterName = htmlspecialchars($this->user->name, ENT_QUOTES, 'UTF-8');
+        $banner =
+            '<div style="background:#fff8c4;border:1px solid #f0d000;border-radius:4px;padding:12px 16px;margin-bottom:14px;text-align:left;">'
+            . '<div style="font-weight:bold;color:#8a6d00;font-size:13px;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;">Internal staff note &middot; not visible to customer</div>'
+            . '<div style="color:#5a4900;font-size:12px;">From <strong>' . $commenterName . '</strong></div>'
+            . '</div>';
+        return $banner . '<div style="text-align:left;">' . $content . '</div>';
     }
 }
