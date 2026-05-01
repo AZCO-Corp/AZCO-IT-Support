@@ -87,18 +87,15 @@ class CommentController extends Controller {
             $this->sendMail($ticketAuthor);
         }
 
-        if($private) {
-            $this->notifyStaffOfPrivateComment();
-        } else {
-            if($this->ticket->owner && !$isOwner) {
-                $this->sendMail([
-                    'email' => $this->ticket->owner->email,
-                    'name' => $this->ticket->owner->name,
-                    'staff' => true
-                ]);
-            }
-            $this->notifyBcc();
+        if($this->ticket->owner && !$isOwner) {
+            $this->sendMail([
+                'email' => $this->ticket->owner->email,
+                'name' => $this->ticket->owner->name,
+                'staff' => true
+            ], $private);
         }
+
+        $this->notifyBcc($private);
 
         Log::createLog('COMMENT', $this->ticket->ticketNumber);
 
@@ -131,7 +128,7 @@ class CommentController extends Controller {
         $this->ticket->store();
     }
 
-    private function sendMail($recipient) {
+    private function sendMail($recipient, $isPrivate = false) {
         $mailSender = MailSender::getInstance();
 
         $email = $recipient['email'];
@@ -144,14 +141,22 @@ class CommentController extends Controller {
             $url .= '/check-ticket/' . $this->ticket->ticketNumber;
             $url .= '/' . $email;
         }
+
+        $rawContent = $this->replaceWithImagePaths($this->getImagePaths(), $this->content);
+        $content = $isPrivate ? $this->wrapPrivateContent($rawContent) : $rawContent;
+
         $mailSender->setTemplate(MailTemplate::TICKET_RESPONDED, [
           'to' => $email,
           'name' => $name,
           'title' => $this->ticket->title,
           'ticketNumber' => $this->ticket->ticketNumber,
-          'content' => $this->replaceWithImagePaths($this->getImagePaths(), $this->content),
+          'content' => $content,
           'url' => $url
         ]);
+
+        if ($isPrivate) {
+            $mailSender->mailOptions['subject'] = '[INTERNAL NOTE] Ticket #' . $this->ticket->ticketNumber . ' - ' . $this->ticket->title;
+        }
 
         $mailSender->send();
     }
@@ -164,7 +169,7 @@ class CommentController extends Controller {
         return $this->imagePaths;
     }
 
-    private function notifyBcc() {
+    private function notifyBcc($isPrivate = false) {
         $bccAddr = Setting::getSetting('bcc-email')->getValue();
         if (Setting::getSetting('maintenance-mode')->getValue()) {
             $override = Setting::getSetting('maintenance-bcc-override')->getValue();
@@ -180,52 +185,17 @@ class CommentController extends Controller {
             'name' => $commenterName,
             'title' => $this->ticket->title,
             'ticketNumber' => $this->ticket->ticketNumber,
-            'content' => $this->replaceWithImagePaths($this->getImagePaths(), $this->content),
+            'content' => $isPrivate ? $this->wrapPrivateContent($this->replaceWithImagePaths($this->getImagePaths(), $this->content)) : $this->replaceWithImagePaths($this->getImagePaths(), $this->content),
             'url' => Setting::getSetting('url')->getValue()
         ]);
+
+        if ($isPrivate) {
+            $mailSender->mailOptions['subject'] = '[INTERNAL NOTE] Ticket #' . $this->ticket->ticketNumber . ' - ' . $this->ticket->title;
+        }
 
         $mailSender->send();
     }
 
-    private function notifyStaffOfPrivateComment() {
-        $departmentId = $this->ticket->department->id;
-        $commenterEmail = $this->user->email;
-
-        $recipients = [];
-
-        if ($this->ticket->owner && $this->ticket->owner->email !== $commenterEmail) {
-            $recipients[$this->ticket->owner->email] = $this->ticket->owner->name;
-        }
-
-        $staffs = Staff::find("send_email_on_new_ticket = 1");
-        foreach ($staffs as $staff) {
-            if ($staff->email === $commenterEmail) continue;
-            if (!$staff->sharedDepartmentList->includesId($departmentId)) continue;
-            if (isset($recipients[$staff->email])) continue;
-            $recipients[$staff->email] = $staff->name;
-        }
-
-        if (empty($recipients)) return;
-
-        $url = Setting::getSetting('url')->getValue();
-        $rawContent = $this->replaceWithImagePaths($this->getImagePaths(), $this->content);
-        $styledContent = $this->wrapPrivateContent($rawContent);
-        $subject = '[INTERNAL NOTE] Ticket #' . $this->ticket->ticketNumber . ' - ' . $this->ticket->title;
-
-        foreach ($recipients as $email => $name) {
-            $mailSender = MailSender::getInstance();
-            $mailSender->setTemplate(MailTemplate::TICKET_RESPONDED, [
-                'to' => $email,
-                'name' => $name,
-                'title' => $this->ticket->title,
-                'ticketNumber' => $this->ticket->ticketNumber,
-                'content' => $styledContent,
-                'url' => $url,
-            ]);
-            $mailSender->mailOptions['subject'] = $subject;
-            $mailSender->send();
-        }
-    }
 
     private function wrapPrivateContent($content) {
         $commenterName = htmlspecialchars($this->user->name, ENT_QUOTES, 'UTF-8');
